@@ -1,0 +1,167 @@
+import { Link, useLocation } from "wouter";
+import { useAuth } from "@workspace/replit-auth-web";
+import { cn } from "@/lib/utils";
+import { 
+  LayoutDashboard, 
+  Users, 
+  Package, 
+  FileText, 
+  FileCheck, 
+  FileSignature, 
+  CreditCard,
+  UserCircle,
+  Building2,
+  Briefcase,
+  ScrollText,
+  CalendarDays,
+  Clock,
+  Files,
+  ShieldCheck,
+  Building,
+  ActivitySquare,
+  LogOut,
+  ChevronDown
+} from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { useState } from "react";
+
+const NAV_ITEMS = [
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Facturation",
+    icon: FileText,
+    items: [
+      { title: "Clients/Fournisseurs", href: "/billing/partners", icon: Users },
+      { title: "Produits & Services", href: "/billing/products", icon: Package },
+      { title: "Devis", href: "/billing/quotes", icon: FileText },
+      { title: "Proformas", href: "/billing/proformas", icon: FileCheck },
+      { title: "Factures", href: "/billing/invoices", icon: FileSignature },
+      { title: "Paiements", href: "/billing/payments", icon: CreditCard },
+    ],
+  },
+  {
+    title: "RH",
+    icon: UserCircle,
+    items: [
+      { title: "Employés", href: "/hr/employees", icon: UserCircle },
+      { title: "Départements", href: "/hr/departments", icon: Building2 },
+      { title: "Postes", href: "/hr/positions", icon: Briefcase },
+      { title: "Contrats", href: "/hr/contracts", icon: ScrollText },
+      { title: "Congés", href: "/hr/leaves", icon: CalendarDays },
+      { title: "Présences", href: "/hr/attendances", icon: Clock },
+      { title: "Documents", href: "/hr/documents", icon: Files },
+    ],
+  },
+  {
+    title: "Administration",
+    icon: ShieldCheck,
+    items: [
+      { title: "Utilisateurs", href: "/admin/users", icon: Users },
+      { title: "Rôles & Permissions", href: "/admin/roles", icon: ShieldCheck },
+      { title: "Entreprises", href: "/admin/companies", icon: Building },
+      { title: "Journal d'activité", href: "/admin/audit-logs", icon: ActivitySquare },
+    ],
+  },
+];
+
+export function Sidebar() {
+  const [location] = useLocation();
+  const { user, logout } = useAuth();
+
+  return (
+    <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
+      <div className="flex h-14 items-center px-4 border-b border-sidebar-border">
+        <span className="text-xl font-bold text-sidebar-primary tracking-tight font-sans">
+          Nawras ERP
+        </span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-4">
+        <nav className="grid gap-1 px-2">
+          {NAV_ITEMS.map((item, index) => {
+            if (item.items) {
+              return (
+                <Collapsible
+                  key={index}
+                  defaultOpen={item.items.some((subItem) => location.startsWith(subItem.href))}
+                >
+                  <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors group">
+                    <div className="flex items-center">
+                      <item.icon className="mr-3 h-4 w-4" />
+                      {item.title}
+                    </div>
+                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1 px-3 pt-1 pb-2">
+                    {item.items.map((subItem, subIndex) => (
+                      <Link
+                        key={subIndex}
+                        href={subItem.href}
+                        className={cn(
+                          "flex w-full items-center rounded-md px-3 py-2 text-sm transition-colors",
+                          location.startsWith(subItem.href)
+                            ? "bg-sidebar-primary/10 text-sidebar-primary font-medium"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        )}
+                      >
+                        <subItem.icon className="mr-3 h-4 w-4 opacity-70" />
+                        {subItem.title}
+                      </Link>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            }
+
+            return (
+              <Link
+                key={index}
+                href={item.href}
+                className={cn(
+                  "flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  location === item.href
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                )}
+              >
+                <item.icon className="mr-3 h-4 w-4" />
+                {item.title}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="p-4 border-t border-sidebar-border">
+        <div className="flex items-center gap-3 mb-4 px-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-medium">
+            {user?.firstName?.[0] || user?.email?.[0] || "?"}
+          </div>
+          <div className="flex flex-col flex-1 min-w-0">
+            <span className="text-sm font-medium text-foreground truncate">
+              {user?.firstName} {user?.lastName}
+            </span>
+            <span className="text-xs text-muted-foreground truncate">
+              {user?.email}
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={logout}
+          className="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <LogOut className="mr-3 h-4 w-4" />
+          Déconnexion
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,38 @@
+import { Sidebar } from "./Sidebar";
+import { useAuth } from "@workspace/replit-auth-web";
+import { Redirect } from "wouter";
+import { useCurrentUser } from "@/hooks/use-company";
+
+export function Layout({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { hasCompany, isLoading: userLoading } = useCurrentUser();
+
+  const isLoading = authLoading || (isAuthenticated ? userLoading : false);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect to="/login" />;
+  }
+
+  if (!hasCompany) {
+    return <Redirect to="/onboarding" />;
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-background">
+      <Sidebar />
+      <main className="flex-1 overflow-y-auto">
+        <div className="container mx-auto p-8 max-w-7xl">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}

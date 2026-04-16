@@ -1,0 +1,404 @@
+Crée une application SaaS full-stack moderne pour la gestion d’entreprise en Mauritanie, avec :
+
+- Frontend : React + Vite
+- Backend : Node.js + Express
+- Base de données : PostgreSQL
+- ORM : Prisma
+- Authentification : Replit Auth pour la connexion, puis gestion des rôles et permissions dans l’application
+- UI propre, professionnelle, responsive, orientée back-office
+- Architecture multi-tenant : chaque entreprise doit avoir ses propres données via company_id
+
+Objectif produit :
+Développer deux modules principaux :
+1. Facturation
+2. GRH (Ressources Humaines)
+
+L’application doit être prête à évoluer ensuite vers une suite ERP légère.
+
+====================================
+1. EXIGENCES GÉNÉRALES
+====================================
+
+Construis une application structurée, sécurisée et maintenable avec :
+- séparation claire frontend/backend
+- API REST
+- validations backend
+- gestion des erreurs
+- logs propres
+- seed initial pour rôles, permissions et compte administrateur de démonstration
+- code propre, commenté, cohérent
+
+Le projet doit inclure :
+- tableau de bord
+- authentification
+- gestion des entreprises
+- gestion des utilisateurs
+- gestion des rôles et droits d’accès
+- module Facturation
+- module GRH
+
+====================================
+2. MULTI-TENANT
+====================================
+
+L’application doit fonctionner pour plusieurs entreprises.
+
+Toutes les données métier doivent être rattachées à une entreprise avec :
+- company_id
+- created_by
+- updated_by
+- created_at
+- updated_at
+
+Un utilisateur ne peut voir que les données de son entreprise, sauf Super Admin plateforme.
+
+====================================
+3. AUTHENTIFICATION ET AUTORISATION
+====================================
+
+Mettre en place :
+- connexion sécurisée
+- session utilisateur
+- protection des routes frontend
+- protection des endpoints backend
+- middleware d’autorisation basé sur rôles et permissions
+
+Utiliser deux niveaux de sécurité :
+1. Authentification utilisateur
+2. Autorisation fine par rôle et permission
+
+====================================
+4. RÔLES À CRÉER
+====================================
+
+Créer les rôles suivants :
+- Super Admin
+- Admin Entreprise
+- Comptable
+- RH
+- Manager
+- Employé
+
+Définition :
+- Super Admin : accès global à toutes les entreprises, utilisateurs, modules et paramètres
+- Admin Entreprise : accès complet à son entreprise uniquement
+- Comptable : accès complet au module facturation, lecture partielle RH si nécessaire
+- RH : accès complet au module RH, lecture limitée facturation
+- Manager : accès lecture tableaux de bord, employés de son périmètre, validation de certaines demandes
+- Employé : accès restreint à son propre profil, ses congés, ses documents personnels
+
+====================================
+5. GESTION DES PERMISSIONS
+====================================
+
+Créer un vrai système RBAC avec :
+- table roles
+- table permissions
+- table role_permissions
+- table user_roles ou rattachement direct d’un rôle principal à l’utilisateur
+
+Permissions granulaires par action :
+- users.view
+- users.create
+- users.update
+- users.delete
+- roles.view
+- roles.manage
+- companies.view
+- companies.manage
+
+Pour Facturation :
+- partners.view
+- partners.create
+- partners.update
+- partners.delete
+- quotes.view
+- quotes.create
+- quotes.update
+- quotes.delete
+- proformas.view
+- proformas.create
+- proformas.update
+- proformas.delete
+- invoices.view
+- invoices.create
+- invoices.update
+- invoices.delete
+- invoices.validate
+- payments.view
+- payments.create
+
+Pour RH :
+- employees.view
+- employees.create
+- employees.update
+- employees.delete
+- departments.view
+- departments.manage
+- contracts.view
+- contracts.manage
+- leaves.view
+- leaves.create
+- leaves.approve
+- attendances.view
+- attendances.manage
+- employee_documents.view
+- employee_documents.create
+- employee_documents.delete
+
+Créer aussi :
+- dashboard.view
+- settings.manage
+- audit_logs.view
+
+Le backend doit vérifier chaque permission avant toute action sensible.
+
+====================================
+6. MODULE FACTURATION
+====================================
+
+Créer les entités suivantes :
+
+- partners
+  Champs :
+  id, company_id, type (customer, supplier, both), name, company_name, contact_person,
+  email, phone, whatsapp, address, city, country, tax_number, registration_number,
+  notes, status, created_by, updated_by, timestamps
+
+- products_services
+  id, company_id, name, type, description, unit_price, tax_rate, sku, status, timestamps
+
+- quotes
+- quote_items
+- proformas
+- proforma_items
+- invoices
+- invoice_items
+- payments
+
+Fonctionnalités :
+- gestion des clients et fournisseurs dans une seule table partners
+- création de devis
+- création de factures proforma
+- création de factures
+- ajout de lignes d’articles
+- calcul sous-total, taxes, total
+- statuts : draft, validated, sent, partially_paid, paid, cancelled
+- enregistrement des paiements
+- reste à payer
+- recherche, filtres, pagination
+- impression/export PDF
+- numérotation automatique par entreprise
+
+Exemples de numéros :
+- DEV-2026-0001
+- PRO-2026-0001
+- FAC-2026-0001
+
+====================================
+7. MODULE GRH
+====================================
+
+Créer les entités suivantes :
+- departments
+- positions
+- employees
+- contracts
+- leave_types
+- leave_requests
+- attendances
+- employee_documents
+
+Champs de base :
+- employees : id, company_id, employee_code, first_name, last_name, gender, birth_date,
+  phone, email, address, hire_date, department_id, position_id, manager_id,
+  employment_status, emergency_contact, notes, timestamps
+
+- contracts : id, company_id, employee_id, contract_type, start_date, end_date, salary,
+  status, timestamps
+
+- leave_requests : id, company_id, employee_id, leave_type_id, start_date, end_date,
+  days_count, reason, status, approved_by, approved_at, timestamps
+
+- attendances : id, company_id, employee_id, date, check_in, check_out, status, notes
+
+- employee_documents : id, company_id, employee_id, title, file_url, document_type, uploaded_by, timestamps
+
+Fonctionnalités :
+- fiche employé complète
+- départements
+- postes
+- contrats
+- demandes de congé
+- validation/rejet des congés
+- suivi de présence simple
+- documents RH
+- vue personnelle employé
+- vue manager pour validation
+- vue RH complète
+
+====================================
+8. TABLEAU DE BORD
+====================================
+
+Créer un dashboard avec cartes et graphiques :
+- nombre de clients
+- nombre de fournisseurs
+- devis en cours
+- factures impayées
+- chiffre d’affaires facturé
+- nombre d’employés
+- congés en attente
+- répartition par département
+
+Filtrer par entreprise connectée.
+
+====================================
+9. INTERFACE UTILISATEUR
+====================================
+
+Créer une interface admin moderne avec :
+- sidebar
+- topbar
+- login page
+- dashboard
+- pages liste + formulaire + détail
+- tableaux avec recherche et filtres
+- badges de statut
+- modales de confirmation
+- notifications toast
+- responsive desktop/mobile
+
+Prévoir un menu clair :
+- Tableau de bord
+- Facturation
+  - Clients/Fournisseurs
+  - Produits/Services
+  - Devis
+  - Proformas
+  - Factures
+  - Paiements
+- RH
+  - Employés
+  - Départements
+  - Postes
+  - Contrats
+  - Congés
+  - Présences
+  - Documents RH
+- Administration
+  - Utilisateurs
+  - Rôles
+  - Permissions
+  - Paramètres entreprise
+  - Journal d’activité
+
+====================================
+10. JOURNAL D’ACTIVITÉ
+====================================
+
+Créer un audit log pour tracer :
+- connexion
+- création
+- modification
+- suppression
+- validation
+- approbation
+
+Stocker :
+- utilisateur
+- action
+- entité
+- entity_id
+- ancienne valeur si pertinent
+- nouvelle valeur si pertinent
+- date/heure
+- company_id
+
+====================================
+11. BASE DE DONNÉES
+====================================
+
+Générer le schéma PostgreSQL complet avec Prisma pour toutes les tables suivantes :
+- companies
+- users
+- roles
+- permissions
+- role_permissions
+- user_roles ou user principal role
+- audit_logs
+- partners
+- products_services
+- quotes
+- quote_items
+- proformas
+- proforma_items
+- invoices
+- invoice_items
+- payments
+- departments
+- positions
+- employees
+- contracts
+- leave_types
+- leave_requests
+- attendances
+- employee_documents
+
+Ajouter les clés étrangères, index et contraintes utiles.
+
+====================================
+12. DONNÉES DE DÉMO
+====================================
+
+Créer un seed avec :
+- 1 entreprise de démonstration
+- 1 super admin
+- 1 admin entreprise
+- 1 comptable
+- 1 RH
+- 1 manager
+- 1 employé
+- permissions affectées aux rôles
+- quelques clients/fournisseurs
+- quelques factures
+- quelques employés
+- quelques demandes de congé
+
+====================================
+13. RÈGLES MÉTIER IMPORTANTES
+====================================
+
+- un employé ne peut voir que ses propres données RH
+- un manager peut voir les employés sous sa responsabilité
+- le comptable ne doit pas accéder à l’administration RH complète
+- le RH ne doit pas supprimer les factures
+- seul l’admin entreprise ou super admin peut gérer rôles et permissions
+- toutes les listes doivent être filtrées par company_id
+- toute route sensible doit être sécurisée
+
+====================================
+14. LIVRABLES ATTENDUS
+====================================
+
+Je veux que tu génères :
+1. la structure complète du projet
+2. le backend Express
+3. le frontend React
+4. le schéma Prisma
+5. les migrations
+6. les seeds
+7. les pages principales
+8. les middlewares auth et RBAC
+9. les endpoints CRUD
+10. un design propre et exploitable
+11. des données de démonstration
+12. une documentation README expliquant :
+   - comment lancer le projet
+   - variables d’environnement
+   - comment migrer la base
+   - comment seed les données
+   - identifiants de démo
+   - structure des rôles et permissions
+
+Commence par générer l’architecture du projet, le schéma de base de données, puis les modules d’authentification et RBAC avant de construire les écrans métier.

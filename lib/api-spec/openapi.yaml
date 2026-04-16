@@ -3,20 +3,60 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ERP SaaS API for Mauritanian businesses
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: companies
+    description: Company management
+  - name: users
+    description: User management
+  - name: roles
+    description: Role and permission management
+  - name: partners
+    description: Partners (customers/suppliers)
+  - name: products
+    description: Products and services
+  - name: quotes
+    description: Quotes
+  - name: proformas
+    description: Proforma invoices
+  - name: invoices
+    description: Invoices
+  - name: payments
+    description: Payments
+  - name: departments
+    description: HR departments
+  - name: positions
+    description: HR positions
+  - name: employees
+    description: HR employees
+  - name: contracts
+    description: Employee contracts
+  - name: leaveTypes
+    description: Leave types
+  - name: leaveRequests
+    description: Leave requests
+  - name: attendances
+    description: Attendance records
+  - name: employeeDocuments
+    description: Employee documents
+  - name: dashboard
+    description: Dashboard analytics
+  - name: auditLogs
+    description: Audit log entries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +64,1475 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/user:
+    get:
+      operationId: getCurrentAuthUser
+      tags: [auth]
+      summary: Get current authenticated user with app role
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCurrentAuthUserResponse"
+
+  # COMPANIES
+  /companies:
+    get:
+      operationId: listCompanies
+      tags: [companies]
+      summary: List companies (super admin only)
+      responses:
+        "200":
+          description: List of companies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Company"
+    post:
+      operationId: createCompany
+      tags: [companies]
+      summary: Create a company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompanyBody"
+      responses:
+        "201":
+          description: Created company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+  /companies/{id}:
+    get:
+      operationId: getCompany
+      tags: [companies]
+      summary: Get a company
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+    patch:
+      operationId: updateCompany
+      tags: [companies]
+      summary: Update a company
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCompanyBody"
+      responses:
+        "200":
+          description: Updated company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+
+  # USERS
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users for current company
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedUsers"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Invite/create a user in the company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppUser"
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppUser"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppUser"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Remove user from company
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ROLES
+  /roles:
+    get:
+      operationId: listRoles
+      tags: [roles]
+      summary: List roles
+      responses:
+        "200":
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Role"
+  /roles/{id}/permissions:
+    get:
+      operationId: getRolePermissions
+      tags: [roles]
+      summary: Get permissions for a role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Role with permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleWithPermissions"
+    put:
+      operationId: setRolePermissions
+      tags: [roles]
+      summary: Set permissions for a role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetRolePermissionsBody"
+      responses:
+        "200":
+          description: Updated role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleWithPermissions"
+
+  # PARTNERS
+  /partners:
+    get:
+      operationId: listPartners
+      tags: [partners]
+      summary: List partners
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [customer, supplier, both]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated partners
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedPartners"
+    post:
+      operationId: createPartner
+      tags: [partners]
+      summary: Create a partner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePartnerBody"
+      responses:
+        "201":
+          description: Created partner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Partner"
+  /partners/{id}:
+    get:
+      operationId: getPartner
+      tags: [partners]
+      summary: Get a partner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Partner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Partner"
+    patch:
+      operationId: updatePartner
+      tags: [partners]
+      summary: Update a partner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePartnerBody"
+      responses:
+        "200":
+          description: Updated partner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Partner"
+    delete:
+      operationId: deletePartner
+      tags: [partners]
+      summary: Delete a partner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # PRODUCTS
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List products and services
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated products
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedProducts"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product or service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductBody"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # QUOTES
+  /quotes:
+    get:
+      operationId: listQuotes
+      tags: [quotes]
+      summary: List quotes
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated quotes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedQuotes"
+    post:
+      operationId: createQuote
+      tags: [quotes]
+      summary: Create a quote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuoteBody"
+      responses:
+        "201":
+          description: Created quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quote"
+  /quotes/{id}:
+    get:
+      operationId: getQuote
+      tags: [quotes]
+      summary: Get a quote with items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quote with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteWithItems"
+    patch:
+      operationId: updateQuote
+      tags: [quotes]
+      summary: Update a quote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateQuoteBody"
+      responses:
+        "200":
+          description: Updated quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quote"
+    delete:
+      operationId: deleteQuote
+      tags: [quotes]
+      summary: Delete a quote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # PROFORMAS
+  /proformas:
+    get:
+      operationId: listProformas
+      tags: [proformas]
+      summary: List proforma invoices
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated proformas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedProformas"
+    post:
+      operationId: createProforma
+      tags: [proformas]
+      summary: Create a proforma invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProformaBody"
+      responses:
+        "201":
+          description: Created proforma
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proforma"
+  /proformas/{id}:
+    get:
+      operationId: getProforma
+      tags: [proformas]
+      summary: Get proforma with items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proforma with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProformaWithItems"
+    patch:
+      operationId: updateProforma
+      tags: [proformas]
+      summary: Update a proforma
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProformaBody"
+      responses:
+        "200":
+          description: Updated proforma
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proforma"
+    delete:
+      operationId: deleteProforma
+      tags: [proformas]
+      summary: Delete a proforma
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # INVOICES
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [invoices]
+      summary: List invoices
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated invoices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedInvoices"
+    post:
+      operationId: createInvoice
+      tags: [invoices]
+      summary: Create an invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvoiceBody"
+      responses:
+        "201":
+          description: Created invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+  /invoices/{id}:
+    get:
+      operationId: getInvoice
+      tags: [invoices]
+      summary: Get invoice with items and payments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Invoice with items and payments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceWithDetails"
+    patch:
+      operationId: updateInvoice
+      tags: [invoices]
+      summary: Update an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInvoiceBody"
+      responses:
+        "200":
+          description: Updated invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+    delete:
+      operationId: deleteInvoice
+      tags: [invoices]
+      summary: Delete an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+  /invoices/{id}/validate:
+    post:
+      operationId: validateInvoice
+      tags: [invoices]
+      summary: Validate an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Validated invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  # PAYMENTS
+  /payments:
+    get:
+      operationId: listPayments
+      tags: [payments]
+      summary: List payments
+      parameters:
+        - name: invoiceId
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated payments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedPayments"
+    post:
+      operationId: createPayment
+      tags: [payments]
+      summary: Record a payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentBody"
+      responses:
+        "201":
+          description: Created payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+
+  # DEPARTMENTS
+  /departments:
+    get:
+      operationId: listDepartments
+      tags: [departments]
+      summary: List departments
+      responses:
+        "200":
+          description: List of departments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Department"
+    post:
+      operationId: createDepartment
+      tags: [departments]
+      summary: Create a department
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDepartmentBody"
+      responses:
+        "201":
+          description: Created department
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+  /departments/{id}:
+    patch:
+      operationId: updateDepartment
+      tags: [departments]
+      summary: Update a department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDepartmentBody"
+      responses:
+        "200":
+          description: Updated department
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+    delete:
+      operationId: deleteDepartment
+      tags: [departments]
+      summary: Delete a department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # POSITIONS
+  /positions:
+    get:
+      operationId: listPositions
+      tags: [positions]
+      summary: List positions
+      responses:
+        "200":
+          description: List of positions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Position"
+    post:
+      operationId: createPosition
+      tags: [positions]
+      summary: Create a position
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePositionBody"
+      responses:
+        "201":
+          description: Created position
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Position"
+  /positions/{id}:
+    patch:
+      operationId: updatePosition
+      tags: [positions]
+      summary: Update a position
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePositionBody"
+      responses:
+        "200":
+          description: Updated position
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Position"
+    delete:
+      operationId: deletePosition
+      tags: [positions]
+      summary: Delete a position
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # EMPLOYEES
+  /employees:
+    get:
+      operationId: listEmployees
+      tags: [employees]
+      summary: List employees
+      parameters:
+        - name: departmentId
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated employees
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedEmployees"
+    post:
+      operationId: createEmployee
+      tags: [employees]
+      summary: Create an employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployeeBody"
+      responses:
+        "201":
+          description: Created employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+  /employees/{id}:
+    get:
+      operationId: getEmployee
+      tags: [employees]
+      summary: Get an employee with full details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Employee with details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeWithDetails"
+    patch:
+      operationId: updateEmployee
+      tags: [employees]
+      summary: Update an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEmployeeBody"
+      responses:
+        "200":
+          description: Updated employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+    delete:
+      operationId: deleteEmployee
+      tags: [employees]
+      summary: Delete an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # CONTRACTS
+  /contracts:
+    get:
+      operationId: listContracts
+      tags: [contracts]
+      summary: List contracts
+      parameters:
+        - name: employeeId
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated contracts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedContracts"
+    post:
+      operationId: createContract
+      tags: [contracts]
+      summary: Create a contract
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContractBody"
+      responses:
+        "201":
+          description: Created contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+  /contracts/{id}:
+    get:
+      operationId: getContract
+      tags: [contracts]
+      summary: Get a contract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+    patch:
+      operationId: updateContract
+      tags: [contracts]
+      summary: Update a contract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContractBody"
+      responses:
+        "200":
+          description: Updated contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+
+  # LEAVE TYPES
+  /leave-types:
+    get:
+      operationId: listLeaveTypes
+      tags: [leaveTypes]
+      summary: List leave types
+      responses:
+        "200":
+          description: List of leave types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaveType"
+    post:
+      operationId: createLeaveType
+      tags: [leaveTypes]
+      summary: Create a leave type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLeaveTypeBody"
+      responses:
+        "201":
+          description: Created leave type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveType"
+
+  # LEAVE REQUESTS
+  /leave-requests:
+    get:
+      operationId: listLeaveRequests
+      tags: [leaveRequests]
+      summary: List leave requests
+      parameters:
+        - name: employeeId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated leave requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedLeaveRequests"
+    post:
+      operationId: createLeaveRequest
+      tags: [leaveRequests]
+      summary: Create a leave request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLeaveRequestBody"
+      responses:
+        "201":
+          description: Created leave request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRequest"
+  /leave-requests/{id}:
+    get:
+      operationId: getLeaveRequest
+      tags: [leaveRequests]
+      summary: Get a leave request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Leave request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRequest"
+    patch:
+      operationId: updateLeaveRequest
+      tags: [leaveRequests]
+      summary: Update (approve/reject) a leave request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLeaveRequestBody"
+      responses:
+        "200":
+          description: Updated leave request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRequest"
+
+  # ATTENDANCES
+  /attendances:
+    get:
+      operationId: listAttendances
+      tags: [attendances]
+      summary: List attendance records
+      parameters:
+        - name: employeeId
+          in: query
+          schema:
+            type: integer
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated attendance records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedAttendances"
+    post:
+      operationId: createAttendance
+      tags: [attendances]
+      summary: Create an attendance record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAttendanceBody"
+      responses:
+        "201":
+          description: Created attendance record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attendance"
+  /attendances/{id}:
+    patch:
+      operationId: updateAttendance
+      tags: [attendances]
+      summary: Update an attendance record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAttendanceBody"
+      responses:
+        "200":
+          description: Updated attendance record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attendance"
+
+  # EMPLOYEE DOCUMENTS
+  /employee-documents:
+    get:
+      operationId: listEmployeeDocuments
+      tags: [employeeDocuments]
+      summary: List employee documents
+      parameters:
+        - name: employeeId
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated employee documents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedEmployeeDocuments"
+    post:
+      operationId: createEmployeeDocument
+      tags: [employeeDocuments]
+      summary: Create an employee document record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployeeDocumentBody"
+      responses:
+        "201":
+          description: Created employee document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeDocument"
+  /employee-documents/{id}:
+    delete:
+      operationId: deleteEmployeeDocument
+      tags: [employeeDocuments]
+      summary: Delete an employee document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # DASHBOARD
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /dashboard/revenue-chart:
+    get:
+      operationId: getRevenueChart
+      tags: [dashboard]
+      summary: Get monthly revenue chart data
+      responses:
+        "200":
+          description: Revenue chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RevenueChartPoint"
+  /dashboard/department-distribution:
+    get:
+      operationId: getDepartmentDistribution
+      tags: [dashboard]
+      summary: Get employee count by department
+      responses:
+        "200":
+          description: Department distribution
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DepartmentDistributionItem"
+
+  # AUDIT LOGS
+  /audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [auditLogs]
+      summary: List audit logs
+      parameters:
+        - name: entity
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedAuditLogs"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +1543,1850 @@ components:
       required:
         - status
 
+    GetCurrentAuthUserResponse:
+      type: object
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+      required:
+        - user
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+        role:
+          type: ["string", "null"]
+        companyId:
+          type: ["integer", "null"]
+        permissions:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        legalName:
+          type: ["string", "null"]
+        taxNumber:
+          type: ["string", "null"]
+        registrationNumber:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        logo:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateCompanyBody:
+      type: object
+      properties:
+        name:
+          type: string
+        legalName:
+          type: ["string", "null"]
+        taxNumber:
+          type: ["string", "null"]
+        registrationNumber:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+      required:
+        - name
+
+    UpdateCompanyBody:
+      type: object
+      properties:
+        name:
+          type: string
+        legalName:
+          type: ["string", "null"]
+        taxNumber:
+          type: ["string", "null"]
+        registrationNumber:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+
+    AppUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+        companyId:
+          type: ["integer", "null"]
+        roleId:
+          type: ["integer", "null"]
+        roleName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - createdAt
+        - updatedAt
+
+    PaginatedUsers:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppUser"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreateUserBody:
+      type: object
+      properties:
+        email:
+          type: string
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        roleId:
+          type: integer
+      required:
+        - email
+        - roleId
+
+    UpdateUserBody:
+      type: object
+      properties:
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        roleId:
+          type: ["integer", "null"]
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        isSystem:
+          type: boolean
+      required:
+        - id
+        - name
+        - isSystem
+
+    RoleWithPermissions:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        permissions:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - name
+        - permissions
+
+    SetRolePermissionsBody:
+      type: object
+      properties:
+        permissions:
+          type: array
+          items:
+            type: string
+      required:
+        - permissions
+
+    Partner:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        type:
+          type: string
+        name:
+          type: string
+        companyName:
+          type: ["string", "null"]
+        contactPerson:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        whatsapp:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        taxNumber:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - type
+        - name
+        - status
+        - createdAt
+        - updatedAt
+
+    PaginatedPartners:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Partner"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreatePartnerBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [customer, supplier, both]
+        name:
+          type: string
+        companyName:
+          type: ["string", "null"]
+        contactPerson:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        whatsapp:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        taxNumber:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - type
+        - name
+
+    UpdatePartnerBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [customer, supplier, both]
+        name:
+          type: string
+        companyName:
+          type: ["string", "null"]
+        contactPerson:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        whatsapp:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        taxNumber:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        description:
+          type: ["string", "null"]
+        unitPrice:
+          type: number
+        taxRate:
+          type: number
+        sku:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - name
+        - type
+        - unitPrice
+        - taxRate
+        - status
+        - createdAt
+        - updatedAt
+
+    PaginatedProducts:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreateProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [product, service]
+        description:
+          type: ["string", "null"]
+        unitPrice:
+          type: number
+        taxRate:
+          type: number
+        sku:
+          type: ["string", "null"]
+      required:
+        - name
+        - type
+        - unitPrice
+
+    UpdateProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        description:
+          type: ["string", "null"]
+        unitPrice:
+          type: number
+        taxRate:
+          type: number
+        sku:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    DocumentItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: ["integer", "null"]
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        taxRate:
+          type: number
+        subtotal:
+          type: number
+        taxAmount:
+          type: number
+        total:
+          type: number
+      required:
+        - id
+        - description
+        - quantity
+        - unitPrice
+        - taxRate
+        - subtotal
+        - taxAmount
+        - total
+
+    DocumentItemInput:
+      type: object
+      properties:
+        productId:
+          type: ["integer", "null"]
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        taxRate:
+          type: number
+      required:
+        - description
+        - quantity
+        - unitPrice
+
+    Quote:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        quoteNumber:
+          type: string
+        partnerId:
+          type: ["integer", "null"]
+        partnerName:
+          type: ["string", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        validUntil:
+          type: ["string", "null"]
+        subtotal:
+          type: number
+        taxAmount:
+          type: number
+        total:
+          type: number
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - quoteNumber
+        - issueDate
+        - subtotal
+        - taxAmount
+        - total
+        - status
+        - createdAt
+        - updatedAt
+
+    QuoteWithItems:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        quoteNumber:
+          type: string
+        partnerId:
+          type: ["integer", "null"]
+        partnerName:
+          type: ["string", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        validUntil:
+          type: ["string", "null"]
+        subtotal:
+          type: number
+        taxAmount:
+          type: number
+        total:
+          type: number
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentItem"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - quoteNumber
+        - issueDate
+        - subtotal
+        - taxAmount
+        - total
+        - status
+        - items
+        - createdAt
+        - updatedAt
+
+    PaginatedQuotes:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Quote"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreateQuoteBody:
+      type: object
+      properties:
+        partnerId:
+          type: ["integer", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        validUntil:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentItemInput"
+      required:
+        - issueDate
+        - items
+
+    UpdateQuoteBody:
+      type: object
+      properties:
+        partnerId:
+          type: ["integer", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        validUntil:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentItemInput"
+
+    Proforma:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        proformaNumber:
+          type: string
+        partnerId:
+          type: ["integer", "null"]
+        partnerName:
+          type: ["string", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        validUntil:
+          type: ["string", "null"]
+        subtotal:
+          type: number
+        taxAmount:
+          type: number
+        total:
+          type: number
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - proformaNumber
+        - issueDate
+        - subtotal
+        - taxAmount
+        - total
+        - status
+        - createdAt
+        - updatedAt
+
+    ProformaWithItems:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        proformaNumber:
+          type: string
+        partnerId:
+          type: ["integer", "null"]
+        partnerName:
+          type: ["string", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        validUntil:
+          type: ["string", "null"]
+        subtotal:
+          type: number
+        taxAmount:
+          type: number
+        total:
+          type: number
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentItem"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - proformaNumber
+        - issueDate
+        - subtotal
+        - taxAmount
+        - total
+        - status
+        - items
+        - createdAt
+        - updatedAt
+
+    PaginatedProformas:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Proforma"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreateProformaBody:
+      type: object
+      properties:
+        partnerId:
+          type: ["integer", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        validUntil:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentItemInput"
+      required:
+        - issueDate
+        - items
+
+    UpdateProformaBody:
+      type: object
+      properties:
+        partnerId:
+          type: ["integer", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        validUntil:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentItemInput"
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        invoiceNumber:
+          type: string
+        partnerId:
+          type: ["integer", "null"]
+        partnerName:
+          type: ["string", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        subtotal:
+          type: number
+        taxAmount:
+          type: number
+        total:
+          type: number
+        amountPaid:
+          type: number
+        amountDue:
+          type: number
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - invoiceNumber
+        - issueDate
+        - subtotal
+        - taxAmount
+        - total
+        - amountPaid
+        - amountDue
+        - status
+        - createdAt
+        - updatedAt
+
+    InvoiceWithDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        invoiceNumber:
+          type: string
+        partnerId:
+          type: ["integer", "null"]
+        partnerName:
+          type: ["string", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        subtotal:
+          type: number
+        taxAmount:
+          type: number
+        total:
+          type: number
+        amountPaid:
+          type: number
+        amountDue:
+          type: number
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentItem"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - invoiceNumber
+        - issueDate
+        - subtotal
+        - taxAmount
+        - total
+        - amountPaid
+        - amountDue
+        - status
+        - items
+        - payments
+        - createdAt
+        - updatedAt
+
+    PaginatedInvoices:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invoice"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreateInvoiceBody:
+      type: object
+      properties:
+        partnerId:
+          type: ["integer", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentItemInput"
+      required:
+        - issueDate
+        - items
+
+    UpdateInvoiceBody:
+      type: object
+      properties:
+        partnerId:
+          type: ["integer", "null"]
+        subject:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentItemInput"
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        invoiceId:
+          type: integer
+        amount:
+          type: number
+        paymentDate:
+          type: string
+        paymentMethod:
+          type: string
+        reference:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - invoiceId
+        - amount
+        - paymentDate
+        - paymentMethod
+        - createdAt
+
+    PaginatedPayments:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreatePaymentBody:
+      type: object
+      properties:
+        invoiceId:
+          type: integer
+        amount:
+          type: number
+        paymentDate:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [cash, bank_transfer, check, mobile_money, other]
+        reference:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - invoiceId
+        - amount
+        - paymentDate
+        - paymentMethod
+
+    Department:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        managerId:
+          type: ["integer", "null"]
+        employeeCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - name
+        - employeeCount
+        - createdAt
+        - updatedAt
+
+    CreateDepartmentBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        managerId:
+          type: ["integer", "null"]
+      required:
+        - name
+
+    UpdateDepartmentBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        managerId:
+          type: ["integer", "null"]
+
+    Position:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        name:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - name
+        - createdAt
+        - updatedAt
+
+    CreatePositionBody:
+      type: object
+      properties:
+        name:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+      required:
+        - name
+
+    UpdatePositionBody:
+      type: object
+      properties:
+        name:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+
+    Employee:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        employeeCode:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        gender:
+          type: ["string", "null"]
+        birthDate:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        hireDate:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        departmentName:
+          type: ["string", "null"]
+        positionId:
+          type: ["integer", "null"]
+        positionName:
+          type: ["string", "null"]
+        managerId:
+          type: ["integer", "null"]
+        employmentStatus:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - employeeCode
+        - firstName
+        - lastName
+        - hireDate
+        - employmentStatus
+        - createdAt
+        - updatedAt
+
+    EmployeeWithDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        employeeCode:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        gender:
+          type: ["string", "null"]
+        birthDate:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        hireDate:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        departmentName:
+          type: ["string", "null"]
+        positionId:
+          type: ["integer", "null"]
+        positionName:
+          type: ["string", "null"]
+        managerId:
+          type: ["integer", "null"]
+        employmentStatus:
+          type: string
+        notes:
+          type: ["string", "null"]
+        emergencyContact:
+          type: ["string", "null"]
+        contracts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Contract"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmployeeDocument"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - employeeCode
+        - firstName
+        - lastName
+        - hireDate
+        - employmentStatus
+        - contracts
+        - documents
+        - createdAt
+        - updatedAt
+
+    PaginatedEmployees:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Employee"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreateEmployeeBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        gender:
+          type: ["string", "null"]
+        birthDate:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        hireDate:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        positionId:
+          type: ["integer", "null"]
+        managerId:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        emergencyContact:
+          type: ["string", "null"]
+      required:
+        - firstName
+        - lastName
+        - hireDate
+
+    UpdateEmployeeBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        gender:
+          type: ["string", "null"]
+        birthDate:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        hireDate:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        positionId:
+          type: ["integer", "null"]
+        managerId:
+          type: ["integer", "null"]
+        employmentStatus:
+          type: string
+        notes:
+          type: ["string", "null"]
+        emergencyContact:
+          type: ["string", "null"]
+
+    Contract:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        contractType:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: ["string", "null"]
+        salary:
+          type: number
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - employeeId
+        - contractType
+        - startDate
+        - salary
+        - status
+        - createdAt
+        - updatedAt
+
+    PaginatedContracts:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Contract"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreateContractBody:
+      type: object
+      properties:
+        employeeId:
+          type: integer
+        contractType:
+          type: string
+          enum: [cdi, cdd, interim, internship, freelance]
+        startDate:
+          type: string
+        endDate:
+          type: ["string", "null"]
+        salary:
+          type: number
+      required:
+        - employeeId
+        - contractType
+        - startDate
+        - salary
+
+    UpdateContractBody:
+      type: object
+      properties:
+        contractType:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: ["string", "null"]
+        salary:
+          type: number
+        status:
+          type: string
+
+    LeaveType:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        name:
+          type: string
+        daysAllowed:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - name
+        - createdAt
+
+    CreateLeaveTypeBody:
+      type: object
+      properties:
+        name:
+          type: string
+        daysAllowed:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+      required:
+        - name
+
+    LeaveRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        leaveTypeId:
+          type: integer
+        leaveTypeName:
+          type: ["string", "null"]
+        startDate:
+          type: string
+        endDate:
+          type: string
+        daysCount:
+          type: integer
+        reason:
+          type: ["string", "null"]
+        status:
+          type: string
+        approvedBy:
+          type: ["integer", "null"]
+        approvedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - employeeId
+        - leaveTypeId
+        - startDate
+        - endDate
+        - daysCount
+        - status
+        - createdAt
+        - updatedAt
+
+    PaginatedLeaveRequests:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaveRequest"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreateLeaveRequestBody:
+      type: object
+      properties:
+        employeeId:
+          type: integer
+        leaveTypeId:
+          type: integer
+        startDate:
+          type: string
+        endDate:
+          type: string
+        reason:
+          type: ["string", "null"]
+      required:
+        - employeeId
+        - leaveTypeId
+        - startDate
+        - endDate
+
+    UpdateLeaveRequestBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected, cancelled]
+        reason:
+          type: ["string", "null"]
+
+    Attendance:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        date:
+          type: string
+        checkIn:
+          type: ["string", "null"]
+        checkOut:
+          type: ["string", "null"]
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - employeeId
+        - date
+        - status
+        - createdAt
+
+    PaginatedAttendances:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attendance"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreateAttendanceBody:
+      type: object
+      properties:
+        employeeId:
+          type: integer
+        date:
+          type: string
+        checkIn:
+          type: ["string", "null"]
+        checkOut:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [present, absent, late, half_day, holiday]
+        notes:
+          type: ["string", "null"]
+      required:
+        - employeeId
+        - date
+        - status
+
+    UpdateAttendanceBody:
+      type: object
+      properties:
+        checkIn:
+          type: ["string", "null"]
+        checkOut:
+          type: ["string", "null"]
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+
+    EmployeeDocument:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        employeeId:
+          type: integer
+        title:
+          type: string
+        fileUrl:
+          type: ["string", "null"]
+        documentType:
+          type: string
+        uploadedBy:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - companyId
+        - employeeId
+        - title
+        - documentType
+        - createdAt
+
+    PaginatedEmployeeDocuments:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmployeeDocument"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    CreateEmployeeDocumentBody:
+      type: object
+      properties:
+        employeeId:
+          type: integer
+        title:
+          type: string
+        fileUrl:
+          type: ["string", "null"]
+        documentType:
+          type: string
+          enum: [contract, id_card, diploma, medical, other]
+      required:
+        - employeeId
+        - title
+        - documentType
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalCustomers:
+          type: integer
+        totalSuppliers:
+          type: integer
+        pendingQuotes:
+          type: integer
+        unpaidInvoices:
+          type: integer
+        totalRevenue:
+          type: number
+        totalEmployees:
+          type: integer
+        pendingLeaves:
+          type: integer
+        monthlyRevenue:
+          type: number
+      required:
+        - totalCustomers
+        - totalSuppliers
+        - pendingQuotes
+        - unpaidInvoices
+        - totalRevenue
+        - totalEmployees
+        - pendingLeaves
+        - monthlyRevenue
+
+    RevenueChartPoint:
+      type: object
+      properties:
+        month:
+          type: string
+        revenue:
+          type: number
+        invoiceCount:
+          type: integer
+      required:
+        - month
+        - revenue
+        - invoiceCount
+
+    DepartmentDistributionItem:
+      type: object
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+      required:
+        - name
+        - count
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: ["integer", "null"]
+        userId:
+          type: ["string", "null"]
+        userEmail:
+          type: ["string", "null"]
+        action:
+          type: string
+        entity:
+          type: string
+        entityId:
+          type: ["string", "null"]
+        oldValues:
+          type: ["string", "null"]
+        newValues:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - action
+        - entity
+        - createdAt
+
+    PaginatedAuditLogs:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - limit
+
+    ExchangeMobileAuthorizationCodeBody:
+      type: object
+      properties:
+        code:
+          type: string
+        code_verifier:
+          type: string
+        redirect_uri:
+          type: string
+        state:
+          type: string
+        nonce:
+          type: ["string", "null"]
+      required:
+        - code
+        - code_verifier
+        - redirect_uri
+        - state
+
+    ExchangeMobileAuthorizationCodeResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+
+    LogoutMobileSessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
