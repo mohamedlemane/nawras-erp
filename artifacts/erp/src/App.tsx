@@ -46,7 +46,7 @@ function AppRouter() {
       <Route path="/">
         <Redirect to="/dashboard" />
       </Route>
-      <Route path="/:rest*">
+      <Route path="*">
         <Layout>
           <Switch>
             <Route path="/dashboard" component={Dashboard} />
