@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, eq, ilike, sql } from "drizzle-orm";
 import { db, departmentsTable, positionsTable, employeesTable, contractsTable, leaveTypesTable, leaveRequestsTable, attendancesTable, employeeDocumentsTable } from "@workspace/db";
-import { requireAuth, getUserCompanyInfo } from "../lib/rbac";
+import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
 import { createAuditLog } from "../lib/audit";
 
 const router: IRouter = Router();
@@ -11,7 +11,7 @@ const router: IRouter = Router();
 router.get("/departments", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const depts = await db.select().from(departmentsTable).where(eq(departmentsTable.companyId, info.companyId)).orderBy(departmentsTable.name);
   
@@ -30,7 +30,7 @@ router.get("/departments", requireAuth, async (req: Request, res: Response): Pro
 router.post("/departments", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const { name, description, managerId } = req.body;
   if (!name) { res.status(400).json({ error: "name is required" }); return; }
@@ -41,7 +41,7 @@ router.post("/departments", requireAuth, async (req: Request, res: Response): Pr
 router.patch("/departments/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -54,7 +54,7 @@ router.patch("/departments/:id", requireAuth, async (req: Request, res: Response
 router.delete("/departments/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -67,7 +67,7 @@ router.delete("/departments/:id", requireAuth, async (req: Request, res: Respons
 router.get("/positions", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const positions = await db.select().from(positionsTable).where(eq(positionsTable.companyId, info.companyId)).orderBy(positionsTable.name);
   res.json(positions.map((p) => ({ ...p, createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() })));
@@ -76,7 +76,7 @@ router.get("/positions", requireAuth, async (req: Request, res: Response): Promi
 router.post("/positions", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const { name, departmentId, description } = req.body;
   if (!name) { res.status(400).json({ error: "name is required" }); return; }
@@ -87,7 +87,7 @@ router.post("/positions", requireAuth, async (req: Request, res: Response): Prom
 router.patch("/positions/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -100,7 +100,7 @@ router.patch("/positions/:id", requireAuth, async (req: Request, res: Response):
 router.delete("/positions/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -113,7 +113,7 @@ router.delete("/positions/:id", requireAuth, async (req: Request, res: Response)
 router.get("/employees", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10)));
@@ -148,7 +148,7 @@ router.get("/employees", requireAuth, async (req: Request, res: Response): Promi
 router.post("/employees", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const { firstName, lastName, gender, birthDate, phone, email, address, hireDate, departmentId, positionId, managerId, notes, emergencyContact } = req.body;
   if (!firstName || !lastName || !hireDate) { res.status(400).json({ error: "firstName, lastName, hireDate required" }); return; }
@@ -163,7 +163,7 @@ router.post("/employees", requireAuth, async (req: Request, res: Response): Prom
 router.get("/employees/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -179,7 +179,7 @@ router.get("/employees/:id", requireAuth, async (req: Request, res: Response): P
 router.patch("/employees/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -192,7 +192,7 @@ router.patch("/employees/:id", requireAuth, async (req: Request, res: Response):
 router.delete("/employees/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -205,7 +205,7 @@ router.delete("/employees/:id", requireAuth, async (req: Request, res: Response)
 router.get("/contracts", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10)));
@@ -224,7 +224,7 @@ router.get("/contracts", requireAuth, async (req: Request, res: Response): Promi
 router.post("/contracts", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const { employeeId, contractType, startDate, endDate, salary } = req.body;
   if (!employeeId || !contractType || !startDate || salary === undefined) { res.status(400).json({ error: "Missing required fields" }); return; }
@@ -235,7 +235,7 @@ router.post("/contracts", requireAuth, async (req: Request, res: Response): Prom
 router.get("/contracts/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -247,7 +247,7 @@ router.get("/contracts/:id", requireAuth, async (req: Request, res: Response): P
 router.patch("/contracts/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -262,7 +262,7 @@ router.patch("/contracts/:id", requireAuth, async (req: Request, res: Response):
 router.get("/leave-types", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const types = await db.select().from(leaveTypesTable).where(eq(leaveTypesTable.companyId, info.companyId)).orderBy(leaveTypesTable.name);
   res.json(types.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() })));
@@ -271,7 +271,7 @@ router.get("/leave-types", requireAuth, async (req: Request, res: Response): Pro
 router.post("/leave-types", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const { name, daysAllowed, description } = req.body;
   if (!name) { res.status(400).json({ error: "name is required" }); return; }
@@ -284,7 +284,7 @@ router.post("/leave-types", requireAuth, async (req: Request, res: Response): Pr
 router.get("/leave-requests", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10)));
@@ -305,7 +305,7 @@ router.get("/leave-requests", requireAuth, async (req: Request, res: Response): 
 router.post("/leave-requests", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const { employeeId, leaveTypeId, startDate, endDate, reason } = req.body;
   if (!employeeId || !leaveTypeId || !startDate || !endDate) { res.status(400).json({ error: "Missing required fields" }); return; }
@@ -321,7 +321,7 @@ router.post("/leave-requests", requireAuth, async (req: Request, res: Response):
 router.get("/leave-requests/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -333,7 +333,7 @@ router.get("/leave-requests/:id", requireAuth, async (req: Request, res: Respons
 router.patch("/leave-requests/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -352,7 +352,7 @@ router.patch("/leave-requests/:id", requireAuth, async (req: Request, res: Respo
 router.get("/attendances", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10)));
@@ -371,7 +371,7 @@ router.get("/attendances", requireAuth, async (req: Request, res: Response): Pro
 router.post("/attendances", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const { employeeId, date, checkIn, checkOut, status, notes } = req.body;
   if (!employeeId || !date || !status) { res.status(400).json({ error: "Missing required fields" }); return; }
@@ -382,7 +382,7 @@ router.post("/attendances", requireAuth, async (req: Request, res: Response): Pr
 router.patch("/attendances/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
@@ -397,7 +397,7 @@ router.patch("/attendances/:id", requireAuth, async (req: Request, res: Response
 router.get("/employee-documents", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10)));
@@ -416,7 +416,7 @@ router.get("/employee-documents", requireAuth, async (req: Request, res: Respons
 router.post("/employee-documents", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const { employeeId, title, fileUrl, documentType } = req.body;
   if (!employeeId || !title || !documentType) { res.status(400).json({ error: "Missing required fields" }); return; }
@@ -427,7 +427,7 @@ router.post("/employee-documents", requireAuth, async (req: Request, res: Respon
 router.delete("/employee-documents/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);

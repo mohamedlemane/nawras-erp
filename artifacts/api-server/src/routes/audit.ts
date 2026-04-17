@@ -1,14 +1,14 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, eq, sql } from "drizzle-orm";
 import { db, auditLogsTable } from "@workspace/db";
-import { requireAuth, getUserCompanyInfo } from "../lib/rbac";
+import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
 
 const router: IRouter = Router();
 
 router.get("/audit-logs", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10)));

@@ -2,6 +2,31 @@ import { type Request, type Response, type NextFunction } from "express";
 import { db, rolePermissionsTable, permissionsTable, userCompanyTable, rolesTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 
+// Check if current request is from the platform super admin
+export function isPlatformSuperAdmin(req: Request): boolean {
+  return !!(req.user as any)?.isSuperAdmin;
+}
+
+// Handle missing company info — returns appropriate response based on context
+// Returns true if response was sent (caller should return), false if not super admin
+export function handleNoCompany(req: Request, res: Response): boolean {
+  if (!isPlatformSuperAdmin(req)) return false;
+
+  const hasIdParam = !!req.params?.id;
+
+  if (req.method === "GET" && !hasIdParam) {
+    // List routes: return empty paginated response
+    res.json({ data: [], total: 0, page: 1, limit: 20 });
+  } else if (req.method === "GET") {
+    res.status(404).json({ error: "Ressource introuvable" });
+  } else {
+    res.status(403).json({
+      error: "Le super admin de la plateforme doit se connecter en tant que gérant d'une entreprise pour cette action.",
+    });
+  }
+  return true;
+}
+
 // Get user permissions for their company
 export async function getUserPermissions(userId: string, companyId: number): Promise<string[]> {
   const userCompany = await db
@@ -54,13 +79,19 @@ export function requirePermission(permission: string) {
       return;
     }
 
+    // Platform super admin bypasses ALL permission checks
+    if (isPlatformSuperAdmin(req)) {
+      next();
+      return;
+    }
+
     const info = await getUserCompanyInfo(req.user.id);
     if (!info) {
       res.status(403).json({ error: "No company membership found" });
       return;
     }
 
-    // Super admin bypasses all checks
+    // Company super_admin role bypasses checks within their company
     if (info.roleName === "super_admin") {
       (req as any).companyId = info.companyId;
       next();
@@ -84,6 +115,5 @@ export function attachCompany(req: Request, res: Response, next: NextFunction): 
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
-  // companyId will be resolved in the route handler
   next();
 }

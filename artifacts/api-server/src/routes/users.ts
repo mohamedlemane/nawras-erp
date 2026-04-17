@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and, ilike, sql } from "drizzle-orm";
 import { db, usersTable, userCompanyTable, rolesTable } from "@workspace/db";
-import { requireAuth, getUserCompanyInfo } from "../lib/rbac";
+import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
 
 const router: IRouter = Router();
 
@@ -9,7 +9,7 @@ router.get("/users", requireAuth, async (req: Request, res: Response): Promise<v
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10)));
@@ -54,7 +54,7 @@ router.post("/users", requireAuth, async (req: Request, res: Response): Promise<
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const { email, firstName, lastName, roleId } = req.body;
   if (!email || !roleId) {
@@ -108,7 +108,7 @@ router.get("/users/:id", requireAuth, async (req: Request, res: Response): Promi
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
@@ -142,7 +142,7 @@ router.patch("/users/:id", requireAuth, async (req: Request, res: Response): Pro
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { firstName, lastName, roleId } = req.body;
@@ -188,7 +188,7 @@ router.delete("/users/:id", requireAuth, async (req: Request, res: Response): Pr
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   await db

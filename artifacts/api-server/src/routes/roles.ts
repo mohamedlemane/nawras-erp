@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, inArray } from "drizzle-orm";
 import { db, rolesTable, permissionsTable, rolePermissionsTable } from "@workspace/db";
-import { requireAuth, getUserCompanyInfo } from "../lib/rbac";
+import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
 
 const router: IRouter = Router();
 
@@ -25,7 +25,7 @@ router.get("/roles", requireAuth, async (_req: Request, res: Response): Promise<
 router.post("/roles", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const { name, description } = req.body;
   if (!name?.trim()) { res.status(400).json({ error: "Le nom du rôle est requis" }); return; }

@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { db, invoicesTable, paymentsTable, partnersTable, employeesTable, leaveRequestsTable, departmentsTable, quotesTable } from "@workspace/db";
-import { requireAuth, getUserCompanyInfo } from "../lib/rbac";
+import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
 
 const router: IRouter = Router();
 
@@ -9,7 +9,7 @@ const router: IRouter = Router();
 router.get("/dashboard/summary", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const cid = info.companyId;
   const now = new Date();
@@ -51,7 +51,7 @@ router.get("/dashboard/summary", requireAuth, async (req: Request, res: Response
 router.get("/dashboard/revenue-chart", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const cid = info.companyId;
   const startOfYear = new Date(new Date().getFullYear(), 0, 1);
@@ -74,7 +74,7 @@ router.get("/dashboard/revenue-chart", requireAuth, async (req: Request, res: Re
 router.get("/dashboard/department-distribution", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const cid = info.companyId;
 
