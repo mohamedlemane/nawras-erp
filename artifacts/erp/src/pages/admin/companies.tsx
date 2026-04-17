@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { useListCompanies, createCompany } from "@workspace/api-client-react";
+import { useListCompanies } from "@workspace/api-client-react";
 import type { Company, CreateCompanyBody } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building, Plus, Edit, Phone, Mail, MapPin, Globe } from "lucide-react";
+import { Building, Plus, Edit, Phone, Mail, MapPin, Globe, UserCog, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,10 +19,29 @@ const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
 type CompanyForm = Partial<CreateCompanyBody & { status: string }>;
 
-const EMPTY: CompanyForm = {
+type CreatePayload = CompanyForm & {
+  adminEmail: string;
+  adminFirstName?: string | null;
+  adminLastName?: string | null;
+};
+
+const EMPTY_COMPANY: CompanyForm = {
   name: "", legalName: null, taxNumber: null, registrationNumber: null,
   email: null, phone: null, address: null, city: null, country: "Mauritanie",
 };
+
+const EMPTY_ADMIN = { adminEmail: "", adminFirstName: "", adminLastName: "" };
+
+async function postCompany(data: CreatePayload) {
+  const r = await fetch(`${BASE}/api/companies`, {
+    method: "POST", credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const body = await r.json();
+  if (!r.ok) throw new Error(body.error || "Erreur création");
+  return body;
+}
 
 async function patchCompany(id: number, data: CompanyForm) {
   const r = await fetch(`${BASE}/api/companies/${id}`, {
@@ -34,7 +54,7 @@ async function patchCompany(id: number, data: CompanyForm) {
   return body as Company;
 }
 
-function FormFields({ data, onChange }: { data: CompanyForm; onChange: (f: CompanyForm) => void }) {
+function CompanyFields({ data, onChange }: { data: CompanyForm; onChange: (f: CompanyForm) => void }) {
   const set = (k: keyof CompanyForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     onChange({ ...data, [k]: e.target.value || null });
   return (
@@ -49,7 +69,7 @@ function FormFields({ data, onChange }: { data: CompanyForm; onChange: (f: Compa
       </div>
       <div>
         <Label>NIF</Label>
-        <Input value={data.taxNumber ?? ""} onChange={set("taxNumber")} placeholder="Numéro identif. fiscal" />
+        <Input value={data.taxNumber ?? ""} onChange={set("taxNumber")} placeholder="N° identification fiscal" />
       </div>
       <div>
         <Label>N° RC</Label>
@@ -79,6 +99,12 @@ function FormFields({ data, onChange }: { data: CompanyForm; onChange: (f: Compa
   );
 }
 
+function getAdminLabel(admin: any) {
+  if (!admin) return null;
+  const name = [admin.firstName, admin.lastName].filter(Boolean).join(" ");
+  return name || admin.email;
+}
+
 export default function CompaniesList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -86,7 +112,9 @@ export default function CompaniesList() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editItem, setEditItem] = useState<Company | null>(null);
-  const [form, setForm] = useState<CompanyForm>(EMPTY);
+
+  const [companyForm, setCompanyForm] = useState<CompanyForm>(EMPTY_COMPANY);
+  const [adminForm, setAdminForm] = useState(EMPTY_ADMIN);
   const [editForm, setEditForm] = useState<CompanyForm>({});
 
   const { data: companies, isLoading } = useListCompanies({ query: { queryKey: ["companies"] } });
@@ -94,8 +122,19 @@ export default function CompaniesList() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["companies"] });
 
   const createMutation = useMutation({
-    mutationFn: () => createCompany(form as CreateCompanyBody),
-    onSuccess: () => { invalidate(); setCreateOpen(false); setForm(EMPTY); toast({ title: "Entreprise créée avec succès" }); },
+    mutationFn: () => postCompany({
+      ...companyForm,
+      adminEmail: adminForm.adminEmail,
+      adminFirstName: adminForm.adminFirstName || null,
+      adminLastName: adminForm.adminLastName || null,
+    }),
+    onSuccess: () => {
+      invalidate();
+      setCreateOpen(false);
+      setCompanyForm(EMPTY_COMPANY);
+      setAdminForm(EMPTY_ADMIN);
+      toast({ title: "Entreprise créée avec succès" });
+    },
     onError: (e: Error) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
   });
 
@@ -121,20 +160,21 @@ export default function CompaniesList() {
     setEditOpen(true);
   };
 
-  const active = companies?.filter(c => c.status === "active").length ?? 0;
+  const active = companies?.filter((c: any) => c.status === "active").length ?? 0;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Entreprises</h1>
-          <p className="text-muted-foreground mt-2">Gérez les entreprises enregistrées dans le système</p>
+          <p className="text-muted-foreground mt-2">Gérez les entreprises et leurs administrateurs</p>
         </div>
-        <Button onClick={() => { setForm(EMPTY); setCreateOpen(true); }}>
+        <Button onClick={() => { setCompanyForm(EMPTY_COMPANY); setAdminForm(EMPTY_ADMIN); setCreateOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" /> Nouvelle Entreprise
         </Button>
       </div>
 
+      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="pt-4 pb-4">
@@ -156,6 +196,7 @@ export default function CompaniesList() {
         </Card>
       </div>
 
+      {/* Table */}
       <Card>
         <CardContent className="pt-6">
           <Table>
@@ -164,7 +205,7 @@ export default function CompaniesList() {
                 <TableHead>Entreprise</TableHead>
                 <TableHead>NIF / RC</TableHead>
                 <TableHead>Contact</TableHead>
-                <TableHead>Ville</TableHead>
+                <TableHead>Administrateur principal</TableHead>
                 <TableHead>Créée le</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -179,13 +220,13 @@ export default function CompaniesList() {
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Building className="w-8 h-8 opacity-30" />
                       <p>Aucune entreprise enregistrée</p>
-                      <Button size="sm" variant="outline" onClick={() => { setForm(EMPTY); setCreateOpen(true); }}>
+                      <Button size="sm" variant="outline" onClick={() => { setCompanyForm(EMPTY_COMPANY); setAdminForm(EMPTY_ADMIN); setCreateOpen(true); }}>
                         <Plus className="w-3 h-3 mr-1" /> Ajouter
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : companies.map(c => (
+              ) : (companies as any[]).map((c: any) => (
                 <TableRow key={c.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -197,6 +238,7 @@ export default function CompaniesList() {
                       <div>
                         <p className="font-medium leading-tight">{c.name}</p>
                         {c.legalName && <p className="text-xs text-muted-foreground">{c.legalName}</p>}
+                        {c.city && <p className="text-xs text-muted-foreground">{c.city}</p>}
                       </div>
                     </div>
                   </TableCell>
@@ -214,7 +256,21 @@ export default function CompaniesList() {
                       {!c.email && !c.phone && <span className="text-muted-foreground">—</span>}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{c.city || "—"}</TableCell>
+                  <TableCell>
+                    {c.admin ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                          <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                        </div>
+                        <div className="text-sm">
+                          <div className="font-medium leading-tight">{getAdminLabel(c.admin)}</div>
+                          <div className="text-xs text-muted-foreground">{c.admin.email}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-amber-600 italic">Non assigné</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm">{format(new Date(c.createdAt), "dd/MM/yyyy")}</TableCell>
                   <TableCell>
                     <button
@@ -241,12 +297,67 @@ export default function CompaniesList() {
 
       {/* Dialog Créer */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Building className="w-5 h-5" /> Nouvelle Entreprise</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Building className="w-5 h-5" /> Nouvelle Entreprise
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={e => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4">
-            <FormFields data={form} onChange={setForm} />
+          <form onSubmit={e => { e.preventDefault(); createMutation.mutate(); }} className="space-y-5">
+            {/* Infos entreprise */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                Informations de l'entreprise
+              </p>
+              <CompanyFields data={companyForm} onChange={setCompanyForm} />
+            </div>
+
+            <Separator />
+
+            {/* Admin principal */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <UserCog className="w-4 h-4 text-purple-500" />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Administrateur principal
+                </p>
+                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-800">
+                  <ShieldCheck className="w-3 h-3" /> super_admin
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Cet utilisateur aura un accès complet à l'entreprise. S'il n'existe pas encore, son compte sera créé automatiquement.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label>Email *</Label>
+                  <Input
+                    type="email"
+                    value={adminForm.adminEmail}
+                    onChange={e => setAdminForm(f => ({ ...f, adminEmail: e.target.value }))}
+                    placeholder="admin@entreprise.mr"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Prénom</Label>
+                  <Input
+                    value={adminForm.adminFirstName}
+                    onChange={e => setAdminForm(f => ({ ...f, adminFirstName: e.target.value }))}
+                    placeholder="Ahmed"
+                  />
+                </div>
+                <div>
+                  <Label>Nom</Label>
+                  <Input
+                    value={adminForm.adminLastName}
+                    onChange={e => setAdminForm(f => ({ ...f, adminLastName: e.target.value }))}
+                    placeholder="Ould Mohamed"
+                  />
+                </div>
+              </div>
+            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
               <Button type="submit" disabled={createMutation.isPending}>
@@ -261,11 +372,13 @@ export default function CompaniesList() {
       <Sheet open={editOpen} onOpenChange={setEditOpen}>
         <SheetContent side="right" className="sm:max-w-lg flex flex-col p-0">
           <SheetHeader className="px-6 py-4 border-b">
-            <SheetTitle className="flex items-center gap-2"><Edit className="w-5 h-5" /> Modifier — {editItem?.name}</SheetTitle>
+            <SheetTitle className="flex items-center gap-2">
+              <Edit className="w-5 h-5" /> Modifier — {editItem?.name}
+            </SheetTitle>
           </SheetHeader>
           <ScrollArea className="flex-1 px-6 py-4">
             <form onSubmit={e => { e.preventDefault(); updateMutation.mutate(); }} className="space-y-4">
-              <FormFields data={editForm} onChange={setEditForm} />
+              <CompanyFields data={editForm} onChange={setEditForm} />
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Annuler</Button>
                 <Button type="submit" disabled={updateMutation.isPending}>
