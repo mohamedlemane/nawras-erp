@@ -20,7 +20,8 @@ import {
   Building,
   ActivitySquare,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Settings
 } from "lucide-react";
 import {
   Collapsible,
@@ -68,6 +69,13 @@ const NAV_ITEMS = [
       { title: "Rôles & Permissions", href: "/admin/roles", icon: ShieldCheck },
       { title: "Entreprises", href: "/admin/companies", icon: Building },
       { title: "Journal d'activité", href: "/admin/audit-logs", icon: ActivitySquare },
+    ],
+  },
+  {
+    title: "Paramètres",
+    icon: Settings,
+    items: [
+      { title: "Mon Entreprise", href: "/settings/company", icon: Building2 },
     ],
   },
 ];

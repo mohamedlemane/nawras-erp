@@ -24,4 +24,20 @@ export interface UpdateCompanyBody {
   city?: string | null;
   /** @nullable */
   country?: string | null;
+  /** @nullable */
+  logo?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /** @nullable */
+  bankCode?: string | null;
+  /** @nullable */
+  branchCode?: string | null;
+  /** @nullable */
+  accountNumber?: string | null;
+  /** @nullable */
+  ribKey?: string | null;
+  /** @nullable */
+  rib?: string | null;
+  /** @nullable */
+  swiftCode?: string | null;
 }

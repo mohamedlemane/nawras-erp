@@ -36,6 +36,9 @@ import Companies from "@/pages/admin/companies";
 import AuditLogs from "@/pages/admin/audit-logs";
 import Onboarding from "@/pages/onboarding";
 
+// Settings
+import CompanySettings from "@/pages/settings/company";
+
 const queryClient = new QueryClient();
 
 function AppRouter() {
@@ -75,6 +78,8 @@ function AppRouter() {
             <Route path="/admin/roles" component={Roles} />
             <Route path="/admin/companies" component={Companies} />
             <Route path="/admin/audit-logs" component={AuditLogs} />
+
+            <Route path="/settings/company" component={CompanySettings} />
 
             <Route component={NotFound} />
           </Switch>

@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq } from "drizzle-orm";
 import { db, companiesTable } from "@workspace/db";
-import { requireAuth } from "../lib/rbac";
+import { requireAuth, getUserCompanyInfo } from "../lib/rbac";
 import { createAuditLog } from "../lib/audit";
 
 const router: IRouter = Router();
@@ -12,14 +12,16 @@ router.get("/companies", requireAuth, async (req: Request, res: Response): Promi
 });
 
 router.post("/companies", requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const { name, legalName, taxNumber, registrationNumber, email, phone, address, city, country } = req.body;
+  const { name, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
+    logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode } = req.body;
   if (!name) {
     res.status(400).json({ error: "name is required" });
     return;
   }
   const [company] = await db
     .insert(companiesTable)
-    .values({ name, legalName, taxNumber, registrationNumber, email, phone, address, city, country })
+    .values({ name, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
+      logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode })
     .returning();
   await createAuditLog({
     userId: req.isAuthenticated() ? req.user.id : undefined,
@@ -29,6 +31,56 @@ router.post("/companies", requireAuth, async (req: Request, res: Response): Prom
     newValues: company,
   });
   res.status(201).json(serializeCompany(company!));
+});
+
+router.get("/companies/mine", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const info = await getUserCompanyInfo(req.user.id);
+  if (!info) {
+    res.status(404).json({ error: "No company associated with this user" });
+    return;
+  }
+  const [company] = await db.select().from(companiesTable).where(eq(companiesTable.id, info.companyId)).limit(1);
+  if (!company) {
+    res.status(404).json({ error: "Company not found" });
+    return;
+  }
+  res.json(serializeCompany(company));
+});
+
+router.patch("/companies/mine", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const info = await getUserCompanyInfo(req.user.id);
+  if (!info) {
+    res.status(404).json({ error: "No company associated with this user" });
+    return;
+  }
+  const { name, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
+    logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode } = req.body;
+  const [company] = await db
+    .update(companiesTable)
+    .set({ name, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
+      logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode })
+    .where(eq(companiesTable.id, info.companyId))
+    .returning();
+  if (!company) {
+    res.status(404).json({ error: "Company not found" });
+    return;
+  }
+  await createAuditLog({
+    userId: req.user.id,
+    action: "update",
+    entity: "company",
+    entityId: String(company.id),
+    newValues: company,
+  });
+  res.json(serializeCompany(company));
 });
 
 router.get("/companies/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
@@ -45,10 +97,12 @@ router.get("/companies/:id", requireAuth, async (req: Request, res: Response): P
 router.patch("/companies/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  const { name, legalName, taxNumber, registrationNumber, email, phone, address, city, country } = req.body;
+  const { name, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
+    logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode } = req.body;
   const [company] = await db
     .update(companiesTable)
-    .set({ name, legalName, taxNumber, registrationNumber, email, phone, address, city, country })
+    .set({ name, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
+      logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode })
     .where(eq(companiesTable.id, id))
     .returning();
   if (!company) {

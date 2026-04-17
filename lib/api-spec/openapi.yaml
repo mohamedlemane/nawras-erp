@@ -111,6 +111,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Company"
+  /companies/mine:
+    get:
+      operationId: getMyCompany
+      tags: [companies]
+      summary: Get current user's company
+      responses:
+        "200":
+          description: Current company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+    patch:
+      operationId: updateMyCompany
+      tags: [companies]
+      summary: Update current user's company settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCompanyBody"
+      responses:
+        "200":
+          description: Updated company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+
   /companies/{id}:
     get:
       operationId: getCompany
@@ -1602,6 +1632,20 @@ components:
           type: ["string", "null"]
         logo:
           type: ["string", "null"]
+        bankName:
+          type: ["string", "null"]
+        bankCode:
+          type: ["string", "null"]
+        branchCode:
+          type: ["string", "null"]
+        accountNumber:
+          type: ["string", "null"]
+        ribKey:
+          type: ["string", "null"]
+        rib:
+          type: ["string", "null"]
+        swiftCode:
+          type: ["string", "null"]
         status:
           type: string
         createdAt:
@@ -1636,6 +1680,22 @@ components:
           type: ["string", "null"]
         country:
           type: ["string", "null"]
+        logo:
+          type: ["string", "null"]
+        bankName:
+          type: ["string", "null"]
+        bankCode:
+          type: ["string", "null"]
+        branchCode:
+          type: ["string", "null"]
+        accountNumber:
+          type: ["string", "null"]
+        ribKey:
+          type: ["string", "null"]
+        rib:
+          type: ["string", "null"]
+        swiftCode:
+          type: ["string", "null"]
       required:
         - name
 
@@ -1659,6 +1719,22 @@ components:
         city:
           type: ["string", "null"]
         country:
+          type: ["string", "null"]
+        logo:
+          type: ["string", "null"]
+        bankName:
+          type: ["string", "null"]
+        bankCode:
+          type: ["string", "null"]
+        branchCode:
+          type: ["string", "null"]
+        accountNumber:
+          type: ["string", "null"]
+        ribKey:
+          type: ["string", "null"]
+        rib:
+          type: ["string", "null"]
+        swiftCode:
           type: ["string", "null"]
 
     AppUser:
