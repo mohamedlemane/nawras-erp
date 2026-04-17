@@ -1,13 +1,50 @@
 import { useState } from "react";
-import { useListContracts } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useListContracts, useListEmployees, createContract } from "@workspace/api-client-react";
+import type { CreateContractBody, CreateContractBodyContractType } from "@workspace/api-client-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+
+const contractTypeLabels: Record<string, string> = {
+  cdi: 'CDI', cdd: 'CDD', interim: 'Intérim', internship: 'Stage', freelance: 'Freelance',
+};
+const statusColors: Record<string, string> = {
+  active: 'bg-green-100 text-green-700', expired: 'bg-red-100 text-red-700',
+  terminated: 'bg-gray-100 text-gray-700',
+};
 
 export default function ContractsList() {
-  const { data, isLoading } = useListContracts({ query: { queryKey: ["contracts"] } });
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data, isLoading } = useListContracts();
+  const { data: employeesData } = useListEmployees();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState<CreateContractBody>({
+    employeeId: 0, contractType: 'cdi' as CreateContractBodyContractType,
+    startDate: format(new Date(), 'yyyy-MM-dd'), endDate: null, salary: 0,
+  });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/contracts"] });
+
+  const createMutation = useMutation({
+    mutationFn: (data: CreateContractBody) => createContract(data),
+    onSuccess: () => { invalidate(); setDialogOpen(false); toast({ title: "Contrat créé" }); },
+    onError: (e: Error) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate(form);
+  };
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('fr-MR', { style: 'currency', currency: 'MRU' }).format(val);
 
@@ -16,44 +53,76 @@ export default function ContractsList() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Contrats</h1>
+          <p className="text-muted-foreground mt-1">Contrats de travail des employés</p>
         </div>
-        <Button><Plus className="w-4 h-4 mr-2" /> Nouveau Contrat</Button>
+        <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-2" /> Nouveau Contrat</Button>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employé</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Date Début</TableHead>
-                <TableHead>Date Fin</TableHead>
-                <TableHead className="text-right">Salaire</TableHead>
-                <TableHead>Statut</TableHead>
+      <Card><CardContent className="pt-6">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Employé</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Date Début</TableHead>
+              <TableHead>Date Fin</TableHead>
+              <TableHead className="text-right">Salaire</TableHead>
+              <TableHead>Statut</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow><TableCell colSpan={6} className="text-center h-24">Chargement...</TableCell></TableRow>
+            ) : !data?.data?.length ? (
+              <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Aucun contrat</TableCell></TableRow>
+            ) : data.data.map(contract => (
+              <TableRow key={contract.id}>
+                <TableCell className="font-medium">{contract.employeeName}</TableCell>
+                <TableCell><span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-semibold">{contractTypeLabels[contract.contractType] || contract.contractType}</span></TableCell>
+                <TableCell>{format(new Date(contract.startDate), 'dd/MM/yyyy')}</TableCell>
+                <TableCell>{contract.endDate ? format(new Date(contract.endDate), 'dd/MM/yyyy') : 'Indéterminé'}</TableCell>
+                <TableCell className="text-right font-medium">{formatCurrency(contract.salary)}</TableCell>
+                <TableCell><span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[contract.status] || 'bg-gray-100 text-gray-700'}`}>{contract.status}</span></TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center h-24">Chargement...</TableCell></TableRow>
-              ) : !data?.data?.length ? (
-                <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Aucun contrat</TableCell></TableRow>
-              ) : (
-                data.data.map(contract => (
-                  <TableRow key={contract.id}>
-                    <TableCell className="font-medium">{contract.employeeName}</TableCell>
-                    <TableCell className="uppercase">{contract.contractType}</TableCell>
-                    <TableCell>{format(new Date(contract.startDate), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{contract.endDate ? format(new Date(contract.endDate), 'dd/MM/yyyy') : '-'}</TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(contract.salary)}</TableCell>
-                    <TableCell><span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium">{contract.status}</span></TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent></Card>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Nouveau contrat</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label>Employé *</Label>
+              <Select value={form.employeeId?.toString() || ""} onValueChange={v => setForm(f => ({ ...f, employeeId: Number(v) }))}>
+                <SelectTrigger><SelectValue placeholder="Sélectionner un employé" /></SelectTrigger>
+                <SelectContent>
+                  {employeesData?.data?.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.firstName} {e.lastName}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Type de contrat *</Label>
+              <Select value={form.contractType} onValueChange={v => setForm(f => ({ ...f, contractType: v as CreateContractBodyContractType }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(contractTypeLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Date de début *</Label><Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} required /></div>
+              <div><Label>Date de fin</Label><Input type="date" value={form.endDate ?? ""} onChange={e => setForm(f => ({ ...f, endDate: e.target.value || null }))} /></div>
+            </div>
+            <div><Label>Salaire (MRU) *</Label><Input type="number" min="0" step="1" value={form.salary} onChange={e => setForm(f => ({ ...f, salary: Number(e.target.value) }))} required /></div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
+              <Button type="submit" disabled={createMutation.isPending}>{createMutation.isPending ? "En cours..." : "Créer"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

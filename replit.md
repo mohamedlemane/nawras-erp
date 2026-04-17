@@ -94,3 +94,36 @@ Tables: `sessions`, `users`, `companies`, `roles`, `permissions`, `role_permissi
 - **Facturation**: Devis → Proforma → Facture → Paiement workflow
 - **RH**: Employés, Départements, Postes, Contrats, Congés, Présences, Documents
 - **Admin**: Utilisateurs, Rôles & Permissions, Entreprises, Journal d'activité
+
+## Frontend CRUD Status (all pages completed)
+
+All pages have functional Create/Edit/Delete dialogs using `useMutation` from `@tanstack/react-query` + async API functions from `@workspace/api-client-react`.
+
+| Module | Entity | Pattern | Status |
+|--------|--------|---------|--------|
+| HR | Departments | Dialog (create/edit/delete) | ✅ |
+| HR | Positions | Dialog (create/edit/delete) | ✅ |
+| HR | Employees | Sheet (create/edit) | ✅ |
+| HR | Contracts | Dialog (create) | ✅ |
+| HR | Leaves | Dialog (create) + approve/reject buttons | ✅ |
+| HR | Attendances | Dialog (create/edit) | ✅ |
+| HR | Documents | Dialog (create) | ✅ |
+| Billing | Partners | Sheet (create/edit/delete) | ✅ |
+| Billing | Products | Dialog (create/edit/delete) | ✅ |
+| Billing | Quotes | Sheet with line items table | ✅ |
+| Billing | Proformas | Sheet with line items table | ✅ |
+| Billing | Invoices | Sheet with line items table | ✅ |
+| Billing | Payments | Dialog (record payment from unpaid invoices) | ✅ |
+| Admin | Users | Dialog (edit role) | ✅ |
+| Admin | Roles | Read-only list (no createRole API) | ✅ |
+
+## CRUD Pattern
+
+```tsx
+const createMutation = useMutation({
+  mutationFn: (data: CreateXBody) => createX(data),
+  onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/entity"] }); setDialogOpen(false); },
+});
+```
+
+Currency: MRU using `new Intl.NumberFormat('fr-MR', { style: 'currency', currency: 'MRU' })`
