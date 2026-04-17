@@ -11,11 +11,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building, Plus, Edit, Phone, Mail, MapPin, Globe, UserCog, ShieldCheck } from "lucide-react";
+import { Building, Plus, Edit, Phone, Mail, MapPin, Globe, UserCog, ShieldCheck, Link } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+
+function autoSubdomain(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .substring(0, 63);
+}
 
 type CompanyForm = Partial<CreateCompanyBody & { status: string }>;
 
@@ -27,7 +39,7 @@ type CreatePayload = CompanyForm & {
 };
 
 const EMPTY_COMPANY: CompanyForm = {
-  name: "", legalName: null, taxNumber: null, registrationNumber: null,
+  name: "", subdomain: null, legalName: null, taxNumber: null, registrationNumber: null,
   email: null, phone: null, address: null, city: null, country: "Mauritanie",
 };
 
@@ -55,14 +67,44 @@ async function patchCompany(id: number, data: CompanyForm) {
   return body as Company;
 }
 
-function CompanyFields({ data, onChange }: { data: CompanyForm; onChange: (f: CompanyForm) => void }) {
+function CompanyFields({ data, onChange, isCreate }: { data: CompanyForm; onChange: (f: CompanyForm) => void; isCreate?: boolean }) {
   const set = (k: keyof CompanyForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     onChange({ ...data, [k]: e.target.value || null });
+
+  // Auto-generate subdomain from name when creating
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const name = e.target.value;
+    const updates: CompanyForm = { ...data, name };
+    if (isCreate && (!data.subdomain || data.subdomain === autoSubdomain(data.name ?? ""))) {
+      updates.subdomain = autoSubdomain(name) || null;
+    }
+    onChange(updates);
+  };
+
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="col-span-2">
         <Label>Nom commercial *</Label>
-        <Input value={data.name ?? ""} onChange={e => onChange({ ...data, name: e.target.value })} required placeholder="Ex: Société XYZ" />
+        <Input value={data.name ?? ""} onChange={handleNameChange} required placeholder="Ex: Société XYZ" />
+      </div>
+      <div className="col-span-2">
+        <Label className="flex items-center gap-1.5">
+          <Link className="w-3 h-3" /> Sous-domaine
+        </Label>
+        <div className="flex items-center gap-0 rounded-md border border-input overflow-hidden focus-within:ring-1 focus-within:ring-ring">
+          <span className="bg-muted px-3 py-2 text-sm text-muted-foreground border-r border-input whitespace-nowrap select-none">
+            ctaone.com/
+          </span>
+          <Input
+            value={data.subdomain ?? ""}
+            onChange={set("subdomain")}
+            placeholder="nom-entreprise"
+            className="border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          URL d'accès : <span className="font-mono">{data.subdomain || "sous-domaine"}.ctaone.com</span>
+        </p>
       </div>
       <div className="col-span-2">
         <Label>Raison sociale</Label>
@@ -155,9 +197,9 @@ export default function CompaniesList() {
   const openEdit = (c: Company) => {
     setEditItem(c);
     setEditForm({
-      name: c.name, legalName: c.legalName, taxNumber: c.taxNumber,
-      registrationNumber: c.registrationNumber, email: c.email, phone: c.phone,
-      address: c.address, city: c.city, country: c.country,
+      name: c.name, subdomain: (c as any).subdomain ?? null, legalName: c.legalName,
+      taxNumber: c.taxNumber, registrationNumber: c.registrationNumber,
+      email: c.email, phone: c.phone, address: c.address, city: c.city, country: c.country,
     });
     setEditOpen(true);
   };
@@ -205,10 +247,10 @@ export default function CompaniesList() {
             <TableHeader>
               <TableRow>
                 <TableHead>Entreprise</TableHead>
+                <TableHead>Sous-domaine</TableHead>
                 <TableHead>NIF / RC</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Administrateur principal</TableHead>
-                <TableHead>Créée le</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -243,6 +285,21 @@ export default function CompaniesList() {
                         {c.city && <p className="text-xs text-muted-foreground">{c.city}</p>}
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {(c as any).subdomain ? (
+                      <a
+                        href={`https://${(c as any).subdomain}.ctaone.com`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-mono text-blue-600 hover:underline"
+                      >
+                        <Globe className="w-3 h-3" />
+                        {(c as any).subdomain}.ctaone.com
+                      </a>
+                    ) : (
+                      <span className="text-xs text-amber-600 italic">Non défini</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
@@ -311,7 +368,7 @@ export default function CompaniesList() {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                 Informations de l'entreprise
               </p>
-              <CompanyFields data={companyForm} onChange={setCompanyForm} />
+              <CompanyFields data={companyForm} onChange={setCompanyForm} isCreate />
             </div>
 
             <Separator />

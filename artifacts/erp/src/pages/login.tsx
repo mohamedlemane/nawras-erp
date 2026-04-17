@@ -1,11 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { Building2, Lock, Mail, Eye, EyeOff, Globe } from "lucide-react";
 import { Redirect } from "wouter";
+
+const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+
+// ── Detect subdomain from hostname ────────────────────────────────────────────
+function getSubdomain(): string | null {
+  const hostname = window.location.hostname;
+  const parts = hostname.split(".");
+  // company.ctaone.com → parts = ["company", "ctaone", "com"] → subdomain = "company"
+  // ctaone.com → parts = ["ctaone", "com"] → no subdomain
+  // localhost → no subdomain
+  if (parts.length >= 3 && parts[0] !== "www" && parts[0] !== "admin") {
+    return parts[0];
+  }
+  return null;
+}
+
+interface CompanyInfo {
+  id: number;
+  name: string;
+  logo: string | null;
+  subdomain: string | null;
+}
 
 export default function Login() {
   const { isAuthenticated, isLoading, login } = useAuth();
@@ -16,7 +38,28 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  if (isLoading) {
+  const subdomain = getSubdomain();
+  const [company, setCompany] = useState<CompanyInfo | null>(null);
+  const [companyLoading, setCompanyLoading] = useState(!!subdomain);
+  const [companyError, setCompanyError] = useState<string | null>(null);
+
+  // Fetch company info from subdomain
+  useEffect(() => {
+    if (!subdomain) return;
+    setCompanyLoading(true);
+    fetch(`${BASE}/api/public/company-by-subdomain?subdomain=${encodeURIComponent(subdomain)}`)
+      .then(async r => {
+        if (!r.ok) {
+          const body = await r.json().catch(() => ({}));
+          throw new Error(body.error || "Entreprise introuvable");
+        }
+        return r.json() as Promise<CompanyInfo>;
+      })
+      .then(data => { setCompany(data); setCompanyLoading(false); })
+      .catch(e => { setCompanyError(e.message); setCompanyLoading(false); });
+  }, [subdomain]);
+
+  if (isLoading || companyLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -26,6 +69,30 @@ export default function Login() {
 
   if (isAuthenticated) {
     return <Redirect to="/dashboard" />;
+  }
+
+  // Subdomain present but company not found
+  if (subdomain && companyError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-red-50 p-4">
+        <Card className="w-full max-w-sm shadow-xl border-0 ring-1 ring-border/40 text-center">
+          <CardContent className="pt-8 pb-8 space-y-4">
+            <div className="mx-auto bg-red-100 w-16 h-16 rounded-2xl flex items-center justify-center">
+              <Globe className="w-8 h-8 text-red-500" />
+            </div>
+            <div>
+              <p className="font-semibold text-lg">Espace introuvable</p>
+              <p className="text-muted-foreground text-sm mt-1">
+                Le sous-domaine <span className="font-mono font-semibold">{subdomain}.ctaone.com</span> ne correspond à aucune entreprise.
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Vérifiez l'adresse ou contactez votre administrateur.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -41,18 +108,36 @@ export default function Login() {
     }
   }
 
+  const isCompanyLogin = !!subdomain && !!company;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-blue-50 p-4">
       <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-border/40">
         <CardHeader className="text-center space-y-4 pb-6 pt-8">
-          <div className="mx-auto bg-primary/10 w-16 h-16 rounded-2xl flex items-center justify-center">
-            <Building2 className="w-8 h-8 text-primary" />
+          <div className="mx-auto bg-primary/10 w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden">
+            {isCompanyLogin && company.logo ? (
+              <img src={company.logo} alt={company.name} className="w-full h-full object-contain p-1" />
+            ) : (
+              <Building2 className="w-8 h-8 text-primary" />
+            )}
           </div>
           <div>
-            <CardTitle className="text-3xl font-bold tracking-tight">Nawras ERP</CardTitle>
+            <CardTitle className="text-3xl font-bold tracking-tight">
+              {isCompanyLogin ? company.name : "Nawras ERP"}
+            </CardTitle>
             <CardDescription className="text-base mt-1">
-              Connectez-vous à votre espace de gestion
+              {isCompanyLogin
+                ? `Connectez-vous à votre espace ${company.name}`
+                : "Connectez-vous à votre espace de gestion"}
             </CardDescription>
+            {isCompanyLogin && (
+              <div className="mt-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs text-blue-700 font-medium">
+                  <Globe className="w-3 h-3" />
+                  {subdomain}.ctaone.com
+                </span>
+              </div>
+            )}
           </div>
         </CardHeader>
 
@@ -108,11 +193,7 @@ export default function Login() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full h-11 text-base font-medium mt-2"
-              disabled={pending}
-            >
+            <Button type="submit" className="w-full h-11 text-base font-medium mt-2" disabled={pending}>
               {pending ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
@@ -123,7 +204,9 @@ export default function Login() {
           </form>
 
           <p className="text-xs text-center text-muted-foreground mt-6">
-            Accès sécurisé réservé aux collaborateurs autorisés.
+            {isCompanyLogin
+              ? `Espace réservé aux collaborateurs de ${company.name}.`
+              : "Accès sécurisé réservé aux collaborateurs autorisés."}
           </p>
         </CardContent>
       </Card>

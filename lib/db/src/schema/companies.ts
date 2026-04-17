@@ -1,10 +1,11 @@
-import { pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, varchar, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const companiesTable = pgTable("companies", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  subdomain: varchar("subdomain", { length: 63 }).unique(),
   legalName: text("legal_name"),
   taxNumber: varchar("tax_number", { length: 50 }),
   registrationNumber: varchar("registration_number", { length: 50 }),
@@ -14,7 +15,6 @@ export const companiesTable = pgTable("companies", {
   city: varchar("city", { length: 100 }),
   country: varchar("country", { length: 100 }).default("Mauritanie"),
   logo: text("logo"),
-  // Coordonnées bancaires
   bankName: varchar("bank_name", { length: 100 }),
   bankCode: varchar("bank_code", { length: 20 }),
   branchCode: varchar("branch_code", { length: 20 }),
