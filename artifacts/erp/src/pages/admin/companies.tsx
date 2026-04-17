@@ -23,6 +23,7 @@ type CreatePayload = CompanyForm & {
   adminEmail: string;
   adminFirstName?: string | null;
   adminLastName?: string | null;
+  adminPassword?: string | null;
 };
 
 const EMPTY_COMPANY: CompanyForm = {
@@ -30,7 +31,7 @@ const EMPTY_COMPANY: CompanyForm = {
   email: null, phone: null, address: null, city: null, country: "Mauritanie",
 };
 
-const EMPTY_ADMIN = { adminEmail: "", adminFirstName: "", adminLastName: "" };
+const EMPTY_ADMIN = { adminEmail: "", adminFirstName: "", adminLastName: "", adminPassword: "" };
 
 async function postCompany(data: CreatePayload) {
   const r = await fetch(`${BASE}/api/companies`, {
@@ -127,6 +128,7 @@ export default function CompaniesList() {
       adminEmail: adminForm.adminEmail,
       adminFirstName: adminForm.adminFirstName || null,
       adminLastName: adminForm.adminLastName || null,
+      adminPassword: adminForm.adminPassword || null,
     }),
     onSuccess: () => {
       invalidate();
@@ -354,6 +356,18 @@ export default function CompaniesList() {
                     onChange={e => setAdminForm(f => ({ ...f, adminLastName: e.target.value }))}
                     placeholder="Ould Mohamed"
                   />
+                </div>
+                <div className="col-span-2">
+                  <Label>Mot de passe *</Label>
+                  <Input
+                    type="password"
+                    value={adminForm.adminPassword}
+                    onChange={e => setAdminForm(f => ({ ...f, adminPassword: e.target.value }))}
+                    placeholder="Mot de passe de connexion"
+                    required
+                    autoComplete="new-password"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Sera utilisé pour la connexion à l'application.</p>
                 </div>
               </div>
             </div>

@@ -10,15 +10,18 @@
   "scripts": {
     "push": "drizzle-kit push --config ./drizzle.config.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
-    "seed:roles": "tsx src/seed-roles.ts"
+    "seed:roles": "tsx src/seed-roles.ts",
+    "seed:superadmin": "tsx src/seed-superadmin.ts"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.20.0",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "catalog:",
     "@types/pg": "^8.18.0",
     "drizzle-kit": "^0.31.9",

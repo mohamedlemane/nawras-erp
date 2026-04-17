@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
@@ -64,6 +64,7 @@ const NAV_ITEMS = [
   {
     title: "Administration",
     icon: ShieldCheck,
+    adminOnly: true,
     items: [
       { title: "Utilisateurs", href: "/admin/users", icon: Users },
       { title: "Rôles & Permissions", href: "/admin/roles", icon: ShieldCheck },
@@ -84,17 +85,29 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
 
+  const visibleItems = NAV_ITEMS.filter(item => {
+    if ((item as any).adminOnly) return user?.isSuperAdmin;
+    return true;
+  });
+
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
       <div className="flex h-14 items-center px-4 border-b border-sidebar-border">
-        <span className="text-xl font-bold text-sidebar-primary tracking-tight font-sans">
-          Nawras ERP
-        </span>
+        <div className="flex flex-col">
+          <span className="text-xl font-bold text-sidebar-primary tracking-tight font-sans">
+            Nawras ERP
+          </span>
+          {user?.isSuperAdmin && (
+            <span className="text-[10px] font-semibold text-purple-500 uppercase tracking-widest -mt-0.5">
+              Super Admin
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="grid gap-1 px-2">
-          {NAV_ITEMS.map((item, index) => {
+          {visibleItems.map((item, index) => {
             if (item.items) {
               return (
                 <Collapsible
@@ -132,10 +145,10 @@ export function Sidebar() {
             return (
               <Link
                 key={index}
-                href={item.href}
+                href={(item as any).href}
                 className={cn(
                   "flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  location === item.href
+                  location === (item as any).href
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 )}
@@ -150,7 +163,10 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 mb-4 px-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-medium">
+          <div className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-full font-medium text-sm",
+            user?.isSuperAdmin ? "bg-purple-100 text-purple-700" : "bg-primary/10 text-primary"
+          )}>
             {user?.firstName?.[0] || user?.email?.[0] || "?"}
           </div>
           <div className="flex flex-col flex-1 min-w-0">

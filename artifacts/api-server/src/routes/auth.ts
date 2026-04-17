@@ -1,6 +1,7 @@
 import * as oidc from "openid-client";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq } from "drizzle-orm";
+import { compareSync } from "bcryptjs";
 import {
   GetCurrentAuthUserResponse,
   ExchangeMobileAuthorizationCodeBody,
@@ -65,9 +66,7 @@ async function upsertUser(claims: Record<string, unknown>) {
     email: (claims.email as string) || null,
     firstName: (claims.first_name as string) || null,
     lastName: (claims.last_name as string) || null,
-    profileImageUrl: (claims.profile_image_url || claims.picture) as
-      | string
-      | null,
+    profileImageUrl: (claims.profile_image_url || claims.picture) as string | null,
   };
 
   const [user] = await db
@@ -75,14 +74,63 @@ async function upsertUser(claims: Record<string, unknown>) {
     .values(userData)
     .onConflictDoUpdate({
       target: usersTable.id,
-      set: {
-        ...userData,
-        updatedAt: new Date(),
-      },
+      set: { ...userData, updatedAt: new Date() },
     })
     .returning();
   return user;
 }
+
+// ─── Local auth ──────────────────────────────────────────────────────────────
+
+router.post("/auth/local/login", async (req: Request, res: Response): Promise<void> => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    res.status(400).json({ error: "Email et mot de passe requis" });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+
+  if (!user || !user.passwordHash) {
+    res.status(401).json({ error: "Identifiants incorrects" });
+    return;
+  }
+
+  const valid = compareSync(password, user.passwordHash);
+  if (!valid) {
+    res.status(401).json({ error: "Identifiants incorrects" });
+    return;
+  }
+
+  const sessionData: SessionData = {
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profileImageUrl: user.profileImageUrl,
+      isSuperAdmin: user.isSuperAdmin,
+    },
+  };
+
+  const sid = await createSession(sessionData);
+  setSessionCookie(res, sid);
+  res.json({
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    isSuperAdmin: user.isSuperAdmin,
+  });
+});
+
+router.post("/auth/local/logout", async (req: Request, res: Response): Promise<void> => {
+  const sid = getSessionId(req);
+  await clearSession(res, sid);
+  res.json({ success: true });
+});
+
+// ─── Current user ─────────────────────────────────────────────────────────────
 
 router.get("/auth/user", (req: Request, res: Response) => {
   res.json(
@@ -92,24 +140,26 @@ router.get("/auth/user", (req: Request, res: Response) => {
   );
 });
 
-// Get current user with company info
 router.get("/auth/me", async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
   const info = await getUserCompanyInfo(req.user.id);
+  const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.id, req.user.id)).limit(1);
   res.json({
     id: req.user.id,
     email: req.user.email,
     firstName: req.user.firstName,
     lastName: req.user.lastName,
     profileImageUrl: req.user.profileImageUrl,
+    isSuperAdmin: dbUser?.isSuperAdmin ?? false,
     company: info ?? null,
   });
 });
 
-// Onboard a newly logged in user by creating a company for them
+// ─── Onboarding ───────────────────────────────────────────────────────────────
+
 router.post("/auth/onboard", async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Unauthorized" });
@@ -135,12 +185,12 @@ router.post("/auth/onboard", async (req: Request, res: Response): Promise<void> 
   res.status(201).json({ message: "Onboarded", companyId: company!.id });
 });
 
+// ─── OIDC (kept for compatibility) ────────────────────────────────────────────
+
 router.get("/login", async (req: Request, res: Response) => {
   const config = await getOidcConfig();
   const callbackUrl = `${getOrigin(req)}/api/callback`;
-
   const returnTo = getSafeReturnTo(req.query.returnTo);
-
   const state = oidc.randomState();
   const nonce = oidc.randomNonce();
   const codeVerifier = oidc.randomPKCECodeVerifier();
@@ -152,32 +202,24 @@ router.get("/login", async (req: Request, res: Response) => {
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
     prompt: "login consent",
-    state,
-    nonce,
+    state, nonce,
   });
 
   setOidcCookie(res, "code_verifier", codeVerifier);
   setOidcCookie(res, "nonce", nonce);
   setOidcCookie(res, "state", state);
   setOidcCookie(res, "return_to", returnTo);
-
   res.redirect(redirectTo.href);
 });
 
-// Query params are not validated because the OIDC provider may include
-// parameters not expressed in the schema.
 router.get("/callback", async (req: Request, res: Response) => {
   const config = await getOidcConfig();
   const callbackUrl = `${getOrigin(req)}/api/callback`;
-
   const codeVerifier = req.cookies?.code_verifier;
   const nonce = req.cookies?.nonce;
   const expectedState = req.cookies?.state;
 
-  if (!codeVerifier || !expectedState) {
-    res.redirect("/api/login");
-    return;
-  }
+  if (!codeVerifier || !expectedState) { res.redirect("/api/login"); return; }
 
   const currentUrl = new URL(
     `${callbackUrl}?${new URL(req.url, `http://${req.headers.host}`).searchParams}`,
@@ -197,30 +239,24 @@ router.get("/callback", async (req: Request, res: Response) => {
   }
 
   const returnTo = getSafeReturnTo(req.cookies?.return_to);
-
   res.clearCookie("code_verifier", { path: "/" });
   res.clearCookie("nonce", { path: "/" });
   res.clearCookie("state", { path: "/" });
   res.clearCookie("return_to", { path: "/" });
 
   const claims = tokens.claims();
-  if (!claims) {
-    res.redirect("/api/login");
-    return;
-  }
+  if (!claims) { res.redirect("/api/login"); return; }
 
-  const dbUser = await upsertUser(
-    claims as unknown as Record<string, unknown>,
-  );
-
+  const dbUser = await upsertUser(claims as unknown as Record<string, unknown>);
   const now = Math.floor(Date.now() / 1000);
   const sessionData: SessionData = {
     user: {
-      id: dbUser.id,
-      email: dbUser.email,
-      firstName: dbUser.firstName,
-      lastName: dbUser.lastName,
-      profileImageUrl: dbUser.profileImageUrl,
+      id: dbUser!.id,
+      email: dbUser!.email,
+      firstName: dbUser!.firstName,
+      lastName: dbUser!.lastName,
+      profileImageUrl: dbUser!.profileImageUrl,
+      isSuperAdmin: dbUser!.isSuperAdmin,
     },
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token,
@@ -233,18 +269,19 @@ router.get("/callback", async (req: Request, res: Response) => {
 });
 
 router.get("/logout", async (req: Request, res: Response) => {
-  const config = await getOidcConfig();
-  const origin = getOrigin(req);
-
   const sid = getSessionId(req);
   await clearSession(res, sid);
 
-  const endSessionUrl = oidc.buildEndSessionUrl(config, {
-    client_id: process.env.REPL_ID!,
-    post_logout_redirect_uri: origin,
-  });
-
-  res.redirect(endSessionUrl.href);
+  try {
+    const config = await getOidcConfig();
+    const endSessionUrl = oidc.buildEndSessionUrl(config, {
+      client_id: process.env.REPL_ID!,
+      post_logout_redirect_uri: getOrigin(req),
+    });
+    res.redirect(endSessionUrl.href);
+  } catch {
+    res.redirect("/");
+  }
 });
 
 router.post(
@@ -260,7 +297,6 @@ router.post(
 
     try {
       const config = await getOidcConfig();
-
       const callbackUrl = new URL(redirect_uri);
       callbackUrl.searchParams.set("code", code);
       callbackUrl.searchParams.set("state", state);
@@ -279,18 +315,16 @@ router.post(
         return;
       }
 
-      const dbUser = await upsertUser(
-        claims as unknown as Record<string, unknown>,
-      );
-
+      const dbUser = await upsertUser(claims as unknown as Record<string, unknown>);
       const now = Math.floor(Date.now() / 1000);
       const sessionData: SessionData = {
         user: {
-          id: dbUser.id,
-          email: dbUser.email,
-          firstName: dbUser.firstName,
-          lastName: dbUser.lastName,
-          profileImageUrl: dbUser.profileImageUrl,
+          id: dbUser!.id,
+          email: dbUser!.email,
+          firstName: dbUser!.firstName,
+          lastName: dbUser!.lastName,
+          profileImageUrl: dbUser!.profileImageUrl,
+          isSuperAdmin: dbUser!.isSuperAdmin,
         },
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
@@ -308,9 +342,7 @@ router.post(
 
 router.post("/mobile-auth/logout", async (req: Request, res: Response) => {
   const sid = getSessionId(req);
-  if (sid) {
-    await deleteSession(sid);
-  }
+  if (sid) await deleteSession(sid);
   res.json(LogoutMobileSessionResponse.parse({ success: true }));
 });
 

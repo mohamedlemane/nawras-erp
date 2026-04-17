@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 import { db, companiesTable, usersTable, userCompanyTable, rolesTable } from "@workspace/db";
 import { requireAuth, getUserCompanyInfo } from "../lib/rbac";
 import { createAuditLog } from "../lib/audit";
@@ -42,7 +43,7 @@ router.post("/companies", requireAuth, async (req: Request, res: Response): Prom
   const {
     name, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
     logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode,
-    adminEmail, adminFirstName, adminLastName,
+    adminEmail, adminFirstName, adminLastName, adminPassword,
   } = req.body;
 
   if (!name) { res.status(400).json({ error: "Le nom de l'entreprise est requis" }); return; }
@@ -55,6 +56,9 @@ router.post("/companies", requireAuth, async (req: Request, res: Response): Prom
       logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode })
     .returning();
 
+  // Hash password if provided
+  const passwordHash = adminPassword ? bcrypt.hashSync(adminPassword, 10) : null;
+
   // Find or create the admin user
   let [adminUser] = await db.select().from(usersTable).where(eq(usersTable.email, adminEmail)).limit(1);
   if (!adminUser) {
@@ -62,16 +66,20 @@ router.post("/companies", requireAuth, async (req: Request, res: Response): Prom
       email: adminEmail,
       firstName: adminFirstName ?? null,
       lastName: adminLastName ?? null,
+      passwordHash,
     }).returning();
-  } else if (adminFirstName || adminLastName) {
-    // Update name if provided
-    [adminUser] = await db.update(usersTable)
-      .set({
-        firstName: adminFirstName ?? adminUser.firstName,
-        lastName: adminLastName ?? adminUser.lastName,
-      })
-      .where(eq(usersTable.id, adminUser!.id))
-      .returning();
+  } else {
+    // Update name and/or password if provided
+    const updates: Record<string, any> = {};
+    if (adminFirstName) updates.firstName = adminFirstName;
+    if (adminLastName) updates.lastName = adminLastName;
+    if (passwordHash) updates.passwordHash = passwordHash;
+    if (Object.keys(updates).length > 0) {
+      [adminUser] = await db.update(usersTable)
+        .set(updates)
+        .where(eq(usersTable.id, adminUser!.id))
+        .returning();
+    }
   }
 
   // Find super_admin role

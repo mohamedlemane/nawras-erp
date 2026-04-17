@@ -1,13 +1,9 @@
 import { Sidebar } from "./Sidebar";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
-import { useCurrentUser } from "@/hooks/use-company";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { hasCompany, isLoading: userLoading } = useCurrentUser();
-
-  const isLoading = authLoading || (isAuthenticated ? userLoading : false);
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -21,7 +17,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     return <Redirect to="/login" />;
   }
 
-  if (!hasCompany) {
+  // Super admin bypasses company requirement
+  if (!user?.isSuperAdmin && !user?.company) {
     return <Redirect to="/onboarding" />;
   }
 
