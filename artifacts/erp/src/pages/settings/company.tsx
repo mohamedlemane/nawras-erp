@@ -68,14 +68,28 @@ export default function CompanySettings() {
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 500 * 1024) {
-      alert("Le logo doit être inférieur à 500 Ko.");
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Le logo doit être inférieur à 5 Mo.");
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => {
-      setForm((prev) => ({ ...prev, logo: reader.result as string }));
-      setSuccess(false);
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 400;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL("image/jpeg", 0.8);
+        setForm((prev) => ({ ...prev, logo: compressed }));
+        setSuccess(false);
+      };
+      img.src = ev.target!.result as string;
     };
     reader.readAsDataURL(file);
   };
