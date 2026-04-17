@@ -376,6 +376,13 @@ router.post("/payments", requireAuth, async (req: Request, res: Response): Promi
   const [invoice] = await db.select().from(invoicesTable).where(and(eq(invoicesTable.id, invoiceId), eq(invoicesTable.companyId, info.companyId))).limit(1);
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
 
+  const amountDue = Number(invoice.amountDue);
+  if (Number(amount) <= 0) { res.status(400).json({ error: "Le montant doit être supérieur à 0" }); return; }
+  if (Number(amount) > amountDue) {
+    res.status(400).json({ error: `Le montant saisi (${Number(amount).toFixed(2)} MRU) dépasse le restant dû (${amountDue.toFixed(2)} MRU)` });
+    return;
+  }
+
   const [payment] = await db.insert(paymentsTable).values({ companyId: info.companyId, invoiceId, amount: String(amount), paymentDate: new Date(paymentDate), paymentMethod, reference, notes, createdBy: req.user.id }).returning();
 
   const newAmountPaid = Number(invoice.amountPaid) + Number(amount);
