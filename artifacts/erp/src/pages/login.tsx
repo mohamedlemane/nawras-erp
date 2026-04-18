@@ -12,10 +12,11 @@ const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 // ── Detect subdomain from hostname ────────────────────────────────────────────
 function getSubdomain(): string | null {
   const hostname = window.location.hostname;
+  // Only activate for *.ctaone.com — never on Replit preview URLs, localhost, etc.
+  if (!hostname.endsWith(".ctaone.com")) return null;
   const parts = hostname.split(".");
-  // company.ctaone.com → parts = ["company", "ctaone", "com"] → subdomain = "company"
-  // ctaone.com → parts = ["ctaone", "com"] → no subdomain
-  // localhost → no subdomain
+  // company.ctaone.com → ["company","ctaone","com"] → subdomain = "company"
+  // ctaone.com / www.ctaone.com → no subdomain
   if (parts.length >= 3 && parts[0] !== "www" && parts[0] !== "admin") {
     return parts[0];
   }
