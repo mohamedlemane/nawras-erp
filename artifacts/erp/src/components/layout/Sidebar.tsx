@@ -21,7 +21,9 @@ import {
   ActivitySquare,
   LogOut,
   ChevronDown,
-  Settings
+  Settings,
+  FolderKanban,
+  ClipboardList,
 } from "lucide-react";
 import {
   Collapsible,
@@ -46,6 +48,14 @@ const NAV_ITEMS = [
       { title: "Proformas", href: "/billing/proformas", icon: FileCheck },
       { title: "Factures", href: "/billing/invoices", icon: FileSignature },
       { title: "Paiements", href: "/billing/payments", icon: CreditCard },
+    ],
+  },
+  {
+    title: "Projets",
+    icon: FolderKanban,
+    items: [
+      { title: "Consultations / RFQ", href: "/projects/consultations", icon: ClipboardList },
+      { title: "Projets en cours",    href: "/projects/list",         icon: FolderKanban },
     ],
   },
   {

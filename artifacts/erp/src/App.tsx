@@ -29,6 +29,11 @@ import Leaves from "@/pages/hr/leaves";
 import Attendances from "@/pages/hr/attendances";
 import Documents from "@/pages/hr/documents";
 
+// Projects
+import Consultations from "@/pages/projects/consultations";
+import ProjectsList from "@/pages/projects/projects";
+import ProjectDetail from "@/pages/projects/project-detail";
+
 // Admin
 import Users from "@/pages/admin/users";
 import Roles from "@/pages/admin/roles";
@@ -73,6 +78,10 @@ function AppRouter() {
             <Route path="/hr/leaves" component={Leaves} />
             <Route path="/hr/attendances" component={Attendances} />
             <Route path="/hr/documents" component={Documents} />
+
+            <Route path="/projects/consultations" component={Consultations} />
+            <Route path="/projects/list" component={ProjectsList} />
+            <Route path="/projects/:id" component={ProjectDetail} />
 
             <Route path="/admin/users" component={Users} />
             <Route path="/admin/roles" component={Roles} />

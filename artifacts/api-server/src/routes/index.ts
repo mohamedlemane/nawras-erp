@@ -10,6 +10,7 @@ import billingRouter from "./billing";
 import hrRouter from "./hr";
 import dashboardRouter from "./dashboard";
 import auditRouter from "./audit";
+import projectsRouter from "./projects";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(billingRouter);
 router.use(hrRouter);
 router.use(dashboardRouter);
 router.use(auditRouter);
+router.use(projectsRouter);
 
 export default router;

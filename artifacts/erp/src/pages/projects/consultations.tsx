@@ -1,0 +1,429 @@
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, FileText, Search, ChevronRight, TrendingUp, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
+
+const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+
+const SERVICE_TYPES = [
+  { value: "geotechnique", label: "Géotechnique" },
+  { value: "bathymetrie", label: "Bathymétrie" },
+  { value: "essais", label: "Essais en laboratoire" },
+  { value: "topographie", label: "Topographie" },
+  { value: "inspection", label: "Inspection sous-marine" },
+  { value: "environnement", label: "Étude environnementale" },
+  { value: "structure", label: "Ingénierie structurale" },
+  { value: "autre", label: "Autre" },
+];
+
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  recu:                { label: "Reçu",               color: "bg-blue-100 text-blue-700" },
+  en_etude:            { label: "En étude",            color: "bg-yellow-100 text-yellow-700" },
+  proposition_envoyee: { label: "Proposition envoyée", color: "bg-orange-100 text-orange-700" },
+  en_negociation:      { label: "En négociation",      color: "bg-purple-100 text-purple-700" },
+  attribue:            { label: "Attribué ✓",          color: "bg-green-100 text-green-700" },
+  perdu:               { label: "Perdu",               color: "bg-red-100 text-red-700" },
+  annule:              { label: "Annulé",              color: "bg-gray-100 text-gray-600" },
+};
+
+const TYPE_MAP: Record<string, string> = {
+  rfq: "RFQ", rfp: "RFP", appel_offre: "Appel d'offres", gre_a_gre: "Gré à gré",
+};
+
+async function apiFetch(path: string, opts?: RequestInit) {
+  const r = await fetch(`${BASE}${path}`, { credentials: "include", ...opts });
+  const body = await r.json();
+  if (!r.ok) throw new Error(body.error || "Erreur serveur");
+  return body;
+}
+
+interface Consultation {
+  id: number; reference: string; title: string; partnerId?: number;
+  clientRef?: string; type: string; serviceTypes?: string;
+  description?: string; receivedAt: string; deadlineAt?: string;
+  status: string; estimatedAmount?: string; currency: string;
+  notes?: string; lostReason?: string;
+}
+
+const EMPTY: Partial<Consultation> = {
+  title: "", type: "rfq", status: "recu", currency: "MRU",
+};
+
+export default function Consultations() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState<Partial<Consultation>>(EMPTY);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [detailItem, setDetailItem] = useState<Consultation | null>(null);
+  const [pending, setPending] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["consultations"],
+    queryFn: () => apiFetch(`${BASE}/api/consultations`),
+  });
+
+  const consultations: Consultation[] = data?.data ?? [];
+
+  const filtered = consultations.filter(c => {
+    const q = search.toLowerCase();
+    const matchQ = !q || c.title.toLowerCase().includes(q) || (c.reference ?? "").toLowerCase().includes(q);
+    const matchS = filterStatus === "all" || c.status === filterStatus;
+    return matchQ && matchS;
+  });
+
+  const stats = {
+    total: consultations.length,
+    enCours: consultations.filter(c => ["recu","en_etude","proposition_envoyee","en_negociation"].includes(c.status)).length,
+    attribuees: consultations.filter(c => c.status === "attribue").length,
+    taux: consultations.length > 0
+      ? Math.round((consultations.filter(c => c.status === "attribue").length / consultations.length) * 100)
+      : 0,
+  };
+
+  function toggleService(v: string) {
+    setSelectedServices(s => s.includes(v) ? s.filter(x => x !== v) : [...s, v]);
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setPending(true);
+    try {
+      await apiFetch(`${BASE}/api/consultations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, serviceTypes: selectedServices }),
+      });
+      toast({ title: "Consultation créée" });
+      qc.invalidateQueries({ queryKey: ["consultations"] });
+      setCreateOpen(false);
+      setForm(EMPTY);
+      setSelectedServices([]);
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally { setPending(false); }
+  }
+
+  async function handleStatusChange(id: number, status: string) {
+    try {
+      await apiFetch(`${BASE}/api/consultations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      toast({ title: "Statut mis à jour" });
+      qc.invalidateQueries({ queryKey: ["consultations"] });
+      if (detailItem?.id === id) setDetailItem(v => v ? { ...v, status } : v);
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    }
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm("Supprimer cette consultation ?")) return;
+    try {
+      await apiFetch(`${BASE}/api/consultations/${id}`, { method: "DELETE" });
+      toast({ title: "Consultation supprimée" });
+      qc.invalidateQueries({ queryKey: ["consultations"] });
+      setDetailItem(null);
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Consultations / RFQ</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">Suivi des demandes de consultation entrantes</p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)} className="gap-2">
+          <Plus className="w-4 h-4" /> Nouvelle consultation
+        </Button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Total consultations", value: stats.total, icon: FileText, color: "text-blue-600" },
+          { label: "En cours", value: stats.enCours, icon: Clock, color: "text-yellow-600" },
+          { label: "Attribuées", value: stats.attribuees, icon: CheckCircle2, color: "text-green-600" },
+          { label: "Taux d'attribution", value: `${stats.taux}%`, icon: TrendingUp, color: "text-purple-600" },
+        ].map(s => (
+          <Card key={s.label}>
+            <CardContent className="pt-4 pb-4 flex items-center gap-3">
+              <s.icon className={`w-8 h-8 ${s.color}`} />
+              <div>
+                <p className="text-2xl font-bold">{s.value}</p>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Statut" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les statuts</SelectItem>
+            {Object.entries(STATUS_MAP).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="pt-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Référence</TableHead>
+                <TableHead>Titre / Client</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Prestations</TableHead>
+                <TableHead>Date limite</TableHead>
+                <TableHead>Montant est.</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={8} className="text-center h-24">Chargement...</TableCell></TableRow>
+              ) : filtered.length === 0 ? (
+                <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">Aucune consultation</TableCell></TableRow>
+              ) : filtered.map(c => {
+                const services: string[] = c.serviceTypes ? JSON.parse(c.serviceTypes) : [];
+                const st = STATUS_MAP[c.status] ?? { label: c.status, color: "bg-gray-100 text-gray-600" };
+                return (
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-muted/40" onClick={() => setDetailItem(c)}>
+                    <TableCell className="font-mono text-sm">{c.reference}</TableCell>
+                    <TableCell>
+                      <p className="font-medium">{c.title}</p>
+                      {c.clientRef && <p className="text-xs text-muted-foreground">Réf client: {c.clientRef}</p>}
+                    </TableCell>
+                    <TableCell><Badge variant="outline">{TYPE_MAP[c.type] ?? c.type}</Badge></TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {services.slice(0, 2).map(s => (
+                          <Badge key={s} variant="secondary" className="text-xs">
+                            {SERVICE_TYPES.find(x => x.value === s)?.label ?? s}
+                          </Badge>
+                        ))}
+                        {services.length > 2 && <Badge variant="secondary" className="text-xs">+{services.length - 2}</Badge>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {c.deadlineAt ? format(new Date(c.deadlineAt), "dd MMM yyyy", { locale: fr }) : "—"}
+                    </TableCell>
+                    <TableCell className="text-sm font-medium">
+                      {c.estimatedAmount
+                        ? `${Number(c.estimatedAmount).toLocaleString("fr-FR")} ${c.currency}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${st.color}`}>
+                        {st.label}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); setDetailItem(c); }}>
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Create Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nouvelle consultation</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <Label>Titre / Objet *</Label>
+                <Input value={form.title ?? ""} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
+              </div>
+              <div>
+                <Label>Type</Label>
+                <Select value={form.type ?? "rfq"} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(TYPE_MAP).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Référence client</Label>
+                <Input value={form.clientRef ?? ""} onChange={e => setForm(f => ({ ...f, clientRef: e.target.value }))} placeholder="Réf. du client" />
+              </div>
+              <div>
+                <Label>Date limite de réponse</Label>
+                <Input type="date" value={form.deadlineAt ? form.deadlineAt.substring(0, 10) : ""}
+                  onChange={e => setForm(f => ({ ...f, deadlineAt: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Montant estimé</Label>
+                <Input type="number" value={form.estimatedAmount ?? ""} placeholder="0"
+                  onChange={e => setForm(f => ({ ...f, estimatedAmount: e.target.value }))} />
+              </div>
+            </div>
+
+            <div>
+              <Label className="mb-2 block">Types de prestations</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {SERVICE_TYPES.map(s => (
+                  <label key={s.value} className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer text-sm transition-colors
+                    ${selectedServices.includes(s.value) ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}>
+                    <input type="checkbox" className="rounded" checked={selectedServices.includes(s.value)}
+                      onChange={() => toggleService(s.value)} />
+                    {s.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label>Description</Label>
+              <Textarea value={form.description ?? ""} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                rows={3} placeholder="Contexte, exigences particulières..." />
+            </div>
+            <div>
+              <Label>Notes internes</Label>
+              <Textarea value={form.notes ?? ""} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
+              <Button type="submit" disabled={pending}>{pending ? "Enregistrement..." : "Créer la consultation"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Sheet */}
+      {detailItem && (
+        <Sheet open={!!detailItem} onOpenChange={() => setDetailItem(null)}>
+          <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="text-left">{detailItem.title}</SheetTitle>
+              <p className="text-sm font-mono text-muted-foreground">{detailItem.reference}</p>
+            </SheetHeader>
+            <div className="mt-6 space-y-5">
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${STATUS_MAP[detailItem.status]?.color}`}>
+                  {STATUS_MAP[detailItem.status]?.label ?? detailItem.status}
+                </span>
+                <Badge variant="outline">{TYPE_MAP[detailItem.type] ?? detailItem.type}</Badge>
+              </div>
+
+              {/* Changer statut */}
+              <div>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Changer le statut</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {Object.entries(STATUS_MAP).map(([k, v]) => (
+                    <button key={k} onClick={() => handleStatusChange(detailItem.id, k)}
+                      disabled={detailItem.status === k}
+                      className={`rounded-full px-3 py-1 text-xs font-medium border transition-opacity
+                        ${detailItem.status === k ? "opacity-50 cursor-default" : "hover:opacity-80 cursor-pointer"}
+                        ${v.color}`}>
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {detailItem.clientRef && (
+                  <div><p className="text-muted-foreground">Réf. client</p><p className="font-medium">{detailItem.clientRef}</p></div>
+                )}
+                {detailItem.deadlineAt && (
+                  <div><p className="text-muted-foreground">Date limite</p>
+                    <p className="font-medium">{format(new Date(detailItem.deadlineAt), "dd MMMM yyyy", { locale: fr })}</p></div>
+                )}
+                {detailItem.estimatedAmount && (
+                  <div><p className="text-muted-foreground">Montant estimé</p>
+                    <p className="font-medium text-lg">{Number(detailItem.estimatedAmount).toLocaleString("fr-FR")} {detailItem.currency}</p></div>
+                )}
+                <div>
+                  <p className="text-muted-foreground">Date de réception</p>
+                  <p className="font-medium">{format(new Date(detailItem.receivedAt), "dd MMM yyyy", { locale: fr })}</p>
+                </div>
+              </div>
+
+              {detailItem.serviceTypes && (() => {
+                const services = JSON.parse(detailItem.serviceTypes);
+                return (
+                  <div>
+                    <p className="text-muted-foreground text-sm mb-2">Prestations demandées</p>
+                    <div className="flex flex-wrap gap-2">
+                      {services.map((s: string) => (
+                        <Badge key={s} variant="secondary">
+                          {SERVICE_TYPES.find(x => x.value === s)?.label ?? s}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {detailItem.description && (
+                <div>
+                  <p className="text-muted-foreground text-sm mb-1">Description</p>
+                  <p className="text-sm whitespace-pre-wrap">{detailItem.description}</p>
+                </div>
+              )}
+
+              {detailItem.notes && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notes internes</p>
+                  <p className="text-sm">{detailItem.notes}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2 border-t">
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(detailItem.id)}>
+                  <XCircle className="w-4 h-4 mr-1" /> Supprimer
+                </Button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+    </div>
+  );
+}
