@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, eq, gte, sql } from "drizzle-orm";
-import { db, invoicesTable, paymentsTable, partnersTable, employeesTable, leaveRequestsTable, departmentsTable, quotesTable } from "@workspace/db";
+import { db, invoicesTable, paymentsTable, partnersTable, employeesTable, leaveRequestsTable, departmentsTable, quotesTable, projectsTable, consultationsTable } from "@workspace/db";
 import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
 
 const router: IRouter = Router();
@@ -90,6 +90,94 @@ router.get("/dashboard/department-distribution", requireAuth, async (req: Reques
     .orderBy(sql`count(${employeesTable.id}) desc`);
 
   res.json(distribution);
+});
+
+// GET /api/dashboard/projects-stats
+router.get("/dashboard/projects-stats", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const info = await getUserCompanyInfo(req.user.id);
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+
+  const cid = info.companyId;
+
+  const [byStatus, billingStatus, totals] = await Promise.all([
+    db
+      .select({ status: projectsTable.status, count: sql<number>`count(*)::int` })
+      .from(projectsTable)
+      .where(eq(projectsTable.companyId, cid))
+      .groupBy(projectsTable.status),
+    db
+      .select({ status: projectsTable.billingStatus, count: sql<number>`count(*)::int` })
+      .from(projectsTable)
+      .where(eq(projectsTable.companyId, cid))
+      .groupBy(projectsTable.billingStatus),
+    db.select({ count: sql<number>`count(*)::int` }).from(projectsTable).where(eq(projectsTable.companyId, cid)),
+  ]);
+
+  const statusMap: Record<string, number> = {};
+  for (const row of byStatus) statusMap[row.status] = row.count;
+  const billingMap: Record<string, number> = {};
+  for (const row of billingStatus) billingMap[row.status] = row.count;
+
+  const activeProjects = (statusMap["mobilisation"] ?? 0) + (statusMap["en_cours"] ?? 0);
+  const completedProjects = statusMap["achevement"] ?? 0;
+
+  res.json({
+    total: totals[0]?.count ?? 0,
+    active: activeProjects,
+    completed: completedProjects,
+    preparation: statusMap["preparation"] ?? 0,
+    mobilisation: statusMap["mobilisation"] ?? 0,
+    en_cours: statusMap["en_cours"] ?? 0,
+    achevement: statusMap["achevement"] ?? 0,
+    facture: statusMap["facture"] ?? 0,
+    nonFacture: billingMap["non_facture"] ?? 0,
+    factureB: billingMap["facture"] ?? 0,
+    solde: billingMap["solde"] ?? 0,
+    byStatus: byStatus.map(r => ({ status: r.status, count: r.count })),
+  });
+});
+
+// GET /api/dashboard/consultations-stats
+router.get("/dashboard/consultations-stats", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const info = await getUserCompanyInfo(req.user.id);
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+
+  const cid = info.companyId;
+
+  const [byStatus, byType, totals] = await Promise.all([
+    db
+      .select({ status: consultationsTable.status, count: sql<number>`count(*)::int` })
+      .from(consultationsTable)
+      .where(eq(consultationsTable.companyId, cid))
+      .groupBy(consultationsTable.status),
+    db
+      .select({ type: consultationsTable.type, count: sql<number>`count(*)::int` })
+      .from(consultationsTable)
+      .where(eq(consultationsTable.companyId, cid))
+      .groupBy(consultationsTable.type),
+    db.select({ count: sql<number>`count(*)::int` }).from(consultationsTable).where(eq(consultationsTable.companyId, cid)),
+  ]);
+
+  const total = totals[0]?.count ?? 0;
+  const attribue = byStatus.find(r => r.status === "attribue")?.count ?? 0;
+  const perdu = byStatus.find(r => r.status === "perdu")?.count ?? 0;
+  const inProgress = byStatus
+    .filter(r => ["recu", "en_etude", "proposition_envoyee", "en_negociation"].includes(r.status))
+    .reduce((s, r) => s + r.count, 0);
+
+  const winRate = total > 0 ? Math.round((attribue / total) * 100) : 0;
+
+  res.json({
+    total,
+    attribue,
+    perdu,
+    inProgress,
+    winRate,
+    byStatus: byStatus.map(r => ({ status: r.status, count: r.count })),
+    byType: byType.map(r => ({ type: r.type, count: r.count })),
+  });
 });
 
 export default router;
