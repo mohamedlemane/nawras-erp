@@ -155,9 +155,27 @@ export const projectReportsTable = pgTable("project_reports", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
+// ── Pièces jointes ────────────────────────────────────────────────────────────
+export const projectAttachmentsTable = pgTable("project_attachments", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
+  entityType: varchar("entity_type", { length: 30 }).notNull(), // 'consultation' | 'project' | 'report'
+  entityId: integer("entity_id").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  originalName: varchar("original_name", { length: 255 }).notNull(),
+  contentType: varchar("content_type", { length: 100 }).notNull(),
+  size: integer("size").notNull().default(0),
+  objectPath: text("object_path"),         // chemin GCS (fichiers uploadés)
+  externalUrl: text("external_url"),       // URL externe (liens)
+  category: varchar("category", { length: 50 }).notNull().default("document"), // document | image | lien | autre
+  uploadedBy: varchar("uploaded_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type ProjectServiceType = typeof projectServiceTypesTable.$inferSelect;
 export type ConsultationType = typeof consultationTypesTable.$inferSelect;
 export type Consultation = typeof consultationsTable.$inferSelect;
 export type Project = typeof projectsTable.$inferSelect;
 export type ProjectSite = typeof projectSitesTable.$inferSelect;
 export type ProjectReport = typeof projectReportsTable.$inferSelect;
+export type ProjectAttachment = typeof projectAttachmentsTable.$inferSelect;

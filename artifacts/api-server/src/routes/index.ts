@@ -12,6 +12,8 @@ import dashboardRouter from "./dashboard";
 import auditRouter from "./audit";
 import projectsRouter from "./projects";
 import projectSettingsRouter from "./project-settings";
+import storageRouter from "./storage";
+import attachmentsRouter from "./attachments";
 
 const router: IRouter = Router();
 
@@ -28,5 +30,7 @@ router.use(dashboardRouter);
 router.use(auditRouter);
 router.use(projectsRouter);
 router.use(projectSettingsRouter);
+router.use(storageRouter);
+router.use(attachmentsRouter);
 
 export default router;

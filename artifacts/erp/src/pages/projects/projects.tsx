@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
+import ReactSelect from "react-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +11,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FolderKanban, Anchor, Mountain, Search, ChevronRight, Activity, User } from "lucide-react";
+import { Plus, FolderKanban, Anchor, Mountain, Search, ChevronRight, ChevronLeft, Activity, User } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+const PAGE_SIZE = 10;
+
+// Styles react-select compatibles shadcn/ui
+const rsStyles = {
+  control: (base: any, state: any) => ({
+    ...base,
+    minHeight: "36px",
+    borderRadius: "6px",
+    borderColor: state.isFocused ? "hsl(var(--ring))" : "hsl(var(--input))",
+    boxShadow: state.isFocused ? "0 0 0 2px hsl(var(--ring) / 0.2)" : "none",
+    backgroundColor: "hsl(var(--background))",
+    fontSize: "14px",
+  }),
+  menu: (base: any) => ({ ...base, zIndex: 50, borderRadius: "8px", fontSize: "14px" }),
+  option: (base: any, state: any) => ({
+    ...base,
+    backgroundColor: state.isSelected ? "hsl(var(--primary))" : state.isFocused ? "hsl(var(--muted))" : "transparent",
+    color: state.isSelected ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
+  }),
+  singleValue: (base: any) => ({ ...base, color: "hsl(var(--foreground))" }),
+  placeholder: (base: any) => ({ ...base, color: "hsl(var(--muted-foreground))" }),
+  input: (base: any) => ({ ...base, color: "hsl(var(--foreground))" }),
+};
 
 const DEFAULT_SERVICE_TYPES = [
   { code: "geotechnique", label: "Géotechnique" },
@@ -79,6 +103,7 @@ export default function Projects() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState<Partial<Project>>(EMPTY);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -91,7 +116,7 @@ export default function Projects() {
   });
   const { data: employeesData } = useQuery({
     queryKey: ["employees-all"],
-    queryFn: () => apiFetch(`${BASE}/api/employees?limit=200`),
+    queryFn: () => apiFetch(`${BASE}/api/employees?limit=500`),
   });
   const { data: positionsData } = useQuery({
     queryKey: ["positions"],
@@ -116,12 +141,24 @@ export default function Projects() {
     ? serviceTypesData.filter(t => t.isActive).map(t => ({ code: t.code, label: t.label }))
     : DEFAULT_SERVICE_TYPES;
 
+  // Options react-select pour les employés
+  const employeeOptions = [
+    { value: "", label: "— Aucun —" },
+    ...employees.map(e => ({
+      value: String(e.id),
+      label: e.positionName ? `${e.firstName} ${e.lastName} — ${e.positionName}` : `${e.firstName} ${e.lastName}`,
+    })),
+  ];
+
   const filtered = projects.filter(p => {
     const q = search.toLowerCase();
     const matchQ = !q || p.title.toLowerCase().includes(q) || (p.reference ?? "").toLowerCase().includes(q);
     const matchS = filterStatus === "all" || p.status === filterStatus;
     return matchQ && matchS;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const stats = {
     total: projects.length,
@@ -138,21 +175,10 @@ export default function Projects() {
     return serviceTypes.find(x => x.code === code)?.label ?? code;
   }
 
-  function getEmployeeFullName(id?: number): string {
-    if (!id) return "";
-    const e = employees.find(x => x.id === id);
-    return e ? `${e.firstName} ${e.lastName}` : "";
-  }
-
-  function handleEmployeeSelect(field: "commercial" | "technical" | "hse", empId: string) {
-    if (empId === "none") {
-      if (field === "commercial") setForm(f => ({ ...f, commercialManagerId: undefined, commercialManager: undefined }));
-      if (field === "technical") setForm(f => ({ ...f, technicalManagerId: undefined, technicalManager: undefined }));
-      if (field === "hse") setForm(f => ({ ...f, hseManagerId: undefined, hseManager: undefined }));
-      return;
-    }
-    const id = Number(empId);
-    const name = getEmployeeFullName(id);
+  function handleEmployeeChange(field: "commercial" | "technical" | "hse", empId: string) {
+    const id = empId ? Number(empId) : undefined;
+    const emp = employees.find(e => e.id === id);
+    const name = emp ? `${emp.firstName} ${emp.lastName}` : undefined;
     if (field === "commercial") setForm(f => ({ ...f, commercialManagerId: id, commercialManager: name }));
     if (field === "technical") setForm(f => ({ ...f, technicalManagerId: id, technicalManager: name }));
     if (field === "hse") setForm(f => ({ ...f, hseManagerId: id, hseManager: name }));
@@ -172,10 +198,14 @@ export default function Projects() {
       setCreateOpen(false);
       setForm(EMPTY);
       setSelectedServices([]);
+      setPage(1);
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message, variant: "destructive" });
     } finally { setPending(false); }
   }
+
+  function handleSearch(v: string) { setSearch(v); setPage(1); }
+  function handleFilterStatus(v: string) { setFilterStatus(v); setPage(1); }
 
   return (
     <div className="space-y-6">
@@ -213,9 +243,9 @@ export default function Projects() {
       <div className="flex gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => handleSearch(e.target.value)} />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={handleFilterStatus}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
@@ -248,9 +278,9 @@ export default function Projects() {
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={9} className="text-center h-24">Chargement...</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
+              ) : paginated.length === 0 ? (
                 <TableRow><TableCell colSpan={9} className="text-center h-24 text-muted-foreground">Aucun projet</TableCell></TableRow>
-              ) : filtered.map(p => {
+              ) : paginated.map(p => {
                 const services: string[] = p.serviceTypes ? JSON.parse(p.serviceTypes) : [];
                 const st = STATUS_MAP[p.status] ?? { label: p.status, color: "bg-gray-100 text-gray-600" };
                 const bs = BILLING_MAP[p.billingStatus] ?? { label: p.billingStatus, color: "bg-gray-100 text-gray-600" };
@@ -300,6 +330,37 @@ export default function Projects() {
               })}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-2 pt-4 border-t mt-2">
+              <p className="text-sm text-muted-foreground">
+                {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} sur {filtered.length} projets
+              </p>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8"
+                  disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                  <Button key={p} variant={p === page ? "default" : "outline"}
+                    size="icon" className="h-8 w-8 text-xs"
+                    onClick={() => setPage(p)}>
+                    {p}
+                  </Button>
+                ))}
+                <Button variant="outline" size="icon" className="h-8 w-8"
+                  disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+          {totalPages <= 1 && filtered.length > 0 && (
+            <p className="text-xs text-muted-foreground text-right pt-3 border-t mt-2">
+              {filtered.length} projet{filtered.length > 1 ? "s" : ""}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -343,72 +404,54 @@ export default function Projects() {
                 </Select>
               </div>
 
-              {/* Responsables depuis GRH */}
+              {/* Responsables — react-select avec recherche */}
               <div className="col-span-2 border-t pt-3">
                 <p className="text-sm font-medium text-muted-foreground mb-2">Responsables du projet (depuis GRH)</p>
               </div>
 
               <div>
-                <Label className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-blue-600" />Responsable commercial</Label>
-                <Select
-                  value={form.commercialManagerId ? String(form.commercialManagerId) : "none"}
-                  onValueChange={v => handleEmployeeSelect("commercial", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un employé..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Aucun —</SelectItem>
-                    {employees.map(e => (
-                      <SelectItem key={e.id} value={String(e.id)}>
-                        {e.firstName} {e.lastName}
-                        {e.positionName && <span className="text-muted-foreground"> — {e.positionName}</span>}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="flex items-center gap-1.5 mb-1.5">
+                  <User className="w-3.5 h-3.5 text-blue-600" /> Responsable commercial
+                </Label>
+                <ReactSelect
+                  options={employeeOptions}
+                  value={employeeOptions.find(o => o.value === (form.commercialManagerId ? String(form.commercialManagerId) : "")) ?? employeeOptions[0]}
+                  onChange={opt => handleEmployeeChange("commercial", opt?.value ?? "")}
+                  placeholder="Rechercher..."
+                  styles={rsStyles}
+                  isSearchable
+                  noOptionsMessage={() => "Aucun employé"}
+                />
               </div>
 
               <div>
-                <Label className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-green-600" />Responsable technique</Label>
-                <Select
-                  value={form.technicalManagerId ? String(form.technicalManagerId) : "none"}
-                  onValueChange={v => handleEmployeeSelect("technical", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un employé..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Aucun —</SelectItem>
-                    {employees.map(e => (
-                      <SelectItem key={e.id} value={String(e.id)}>
-                        {e.firstName} {e.lastName}
-                        {e.positionName && <span className="text-muted-foreground"> — {e.positionName}</span>}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="flex items-center gap-1.5 mb-1.5">
+                  <User className="w-3.5 h-3.5 text-green-600" /> Responsable technique
+                </Label>
+                <ReactSelect
+                  options={employeeOptions}
+                  value={employeeOptions.find(o => o.value === (form.technicalManagerId ? String(form.technicalManagerId) : "")) ?? employeeOptions[0]}
+                  onChange={opt => handleEmployeeChange("technical", opt?.value ?? "")}
+                  placeholder="Rechercher..."
+                  styles={rsStyles}
+                  isSearchable
+                  noOptionsMessage={() => "Aucun employé"}
+                />
               </div>
 
               <div>
-                <Label className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-orange-600" />Responsable HSE</Label>
-                <Select
-                  value={form.hseManagerId ? String(form.hseManagerId) : "none"}
-                  onValueChange={v => handleEmployeeSelect("hse", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un employé..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Aucun —</SelectItem>
-                    {employees.map(e => (
-                      <SelectItem key={e.id} value={String(e.id)}>
-                        {e.firstName} {e.lastName}
-                        {e.positionName && <span className="text-muted-foreground"> — {e.positionName}</span>}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="flex items-center gap-1.5 mb-1.5">
+                  <User className="w-3.5 h-3.5 text-orange-600" /> Responsable HSE
+                </Label>
+                <ReactSelect
+                  options={employeeOptions}
+                  value={employeeOptions.find(o => o.value === (form.hseManagerId ? String(form.hseManagerId) : "")) ?? employeeOptions[0]}
+                  onChange={opt => handleEmployeeChange("hse", opt?.value ?? "")}
+                  placeholder="Rechercher..."
+                  styles={rsStyles}
+                  isSearchable
+                  noOptionsMessage={() => "Aucun employé"}
+                />
               </div>
 
               <div>
@@ -430,7 +473,7 @@ export default function Projects() {
               </label>
             </div>
 
-            {/* Types de prestations dynamiques */}
+            {/* Types de prestations */}
             <div>
               <Label className="mb-2 block">
                 Types de prestations

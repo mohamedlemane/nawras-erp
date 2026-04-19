@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import ReactSelect from "react-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,14 +11,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FileText, Search, ChevronRight, TrendingUp, Clock, CheckCircle2, XCircle, Building2 } from "lucide-react";
+import { Plus, FileText, Search, ChevronRight, TrendingUp, Clock, CheckCircle2, XCircle, Building2, ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { AttachmentsPanel } from "@/components/projects/AttachmentsPanel";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+const PAGE_SIZE = 10;
 
-// Valeurs par défaut (utilisées si aucune n'est configurée dans les paramètres)
+// Styles react-select compatibles shadcn/ui
+const rsStyles = {
+  control: (base: any, state: any) => ({
+    ...base,
+    minHeight: "36px",
+    borderRadius: "6px",
+    borderColor: state.isFocused ? "hsl(var(--ring))" : "hsl(var(--input))",
+    boxShadow: state.isFocused ? "0 0 0 2px hsl(var(--ring) / 0.2)" : "none",
+    backgroundColor: "hsl(var(--background))",
+    fontSize: "14px",
+  }),
+  menu: (base: any) => ({ ...base, zIndex: 50, borderRadius: "8px", fontSize: "14px" }),
+  option: (base: any, state: any) => ({
+    ...base,
+    backgroundColor: state.isSelected ? "hsl(var(--primary))" : state.isFocused ? "hsl(var(--muted))" : "transparent",
+    color: state.isSelected ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
+  }),
+  singleValue: (base: any) => ({ ...base, color: "hsl(var(--foreground))" }),
+  placeholder: (base: any) => ({ ...base, color: "hsl(var(--muted-foreground))" }),
+  input: (base: any) => ({ ...base, color: "hsl(var(--foreground))" }),
+};
+
 const DEFAULT_SERVICE_TYPES = [
   { code: "geotechnique", label: "Géotechnique" },
   { code: "bathymetrie", label: "Bathymétrie" },
@@ -75,6 +99,7 @@ export default function Consultations() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState<Partial<Consultation>>(EMPTY);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -88,7 +113,7 @@ export default function Consultations() {
   });
   const { data: partnersData } = useQuery({
     queryKey: ["partners-all"],
-    queryFn: () => apiFetch(`${BASE}/api/partners?type=customer&limit=200`),
+    queryFn: () => apiFetch(`${BASE}/api/partners?type=customer&limit=500`),
   });
   const { data: serviceTypesData } = useQuery<PType[]>({
     queryKey: ["project-service-types"],
@@ -102,7 +127,6 @@ export default function Consultations() {
   const consultations: Consultation[] = data?.data ?? [];
   const partners: Partner[] = partnersData?.data ?? [];
 
-  // Utiliser les types configurés ou les valeurs par défaut
   const serviceTypes = (serviceTypesData && serviceTypesData.length > 0)
     ? serviceTypesData.filter(t => t.isActive).map(t => ({ code: t.code, label: t.label }))
     : DEFAULT_SERVICE_TYPES;
@@ -110,12 +134,26 @@ export default function Consultations() {
     ? consultationTypesData.filter(t => t.isActive).map(t => ({ code: t.code, label: t.label }))
     : DEFAULT_CONSULTATION_TYPES;
 
+  // Options pour react-select
+  const partnerOptions = [
+    { value: "", label: "— Aucun client lié —" },
+    ...partners.map(p => ({
+      value: String(p.id),
+      label: p.companyName ? `${p.companyName} (${p.name})` : p.name,
+    })),
+  ];
+
+  const consultationTypeOptions = consultationTypes.map(t => ({ value: t.code, label: t.label }));
+
   const filtered = consultations.filter(c => {
     const q = search.toLowerCase();
     const matchQ = !q || c.title.toLowerCase().includes(q) || (c.reference ?? "").toLowerCase().includes(q);
     const matchS = filterStatus === "all" || c.status === filterStatus;
     return matchQ && matchS;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const stats = {
     total: consultations.length,
@@ -150,6 +188,7 @@ export default function Consultations() {
       setCreateOpen(false);
       setForm(EMPTY);
       setSelectedServices([]);
+      setPage(1);
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message, variant: "destructive" });
     } finally { setPending(false); }
@@ -196,6 +235,16 @@ export default function Consultations() {
     return consultationTypes.find(x => x.code === code)?.label ?? code;
   }
 
+  function handleSearch(v: string) {
+    setSearch(v);
+    setPage(1);
+  }
+
+  function handleFilterStatus(v: string) {
+    setFilterStatus(v);
+    setPage(1);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -232,9 +281,9 @@ export default function Consultations() {
       <div className="flex gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => handleSearch(e.target.value)} />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={handleFilterStatus}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
@@ -264,9 +313,9 @@ export default function Consultations() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 ? (
+              {paginated.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">Aucune consultation</TableCell></TableRow>
-              ) : filtered.map(c => {
+              ) : paginated.map(c => {
                 const services: string[] = c.serviceTypes ? JSON.parse(c.serviceTypes) : [];
                 const st = STATUS_MAP[c.status] ?? { label: c.status, color: "bg-gray-100 text-gray-600" };
                 return (
@@ -313,6 +362,37 @@ export default function Consultations() {
               })}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-2 pt-4 border-t mt-2">
+              <p className="text-sm text-muted-foreground">
+                {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} sur {filtered.length} consultations
+              </p>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8"
+                  disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                  <Button key={p} variant={p === page ? "default" : "outline"}
+                    size="icon" className="h-8 w-8 text-xs"
+                    onClick={() => setPage(p)}>
+                    {p}
+                  </Button>
+                ))}
+                <Button variant="outline" size="icon" className="h-8 w-8"
+                  disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+          {totalPages <= 1 && filtered.length > 0 && (
+            <p className="text-xs text-muted-foreground text-right pt-3 border-t mt-2">
+              {filtered.length} consultation{filtered.length > 1 ? "s" : ""}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -329,43 +409,36 @@ export default function Consultations() {
                 <Input value={form.title ?? ""} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
               </div>
 
-              {/* Client depuis la base Facturation */}
+              {/* Client — react-select avec recherche */}
               <div className="col-span-2">
                 <Label>Client (depuis Facturation)</Label>
-                <Select
-                  value={form.partnerId ? String(form.partnerId) : "none"}
-                  onValueChange={v => setForm(f => ({ ...f, partnerId: v === "none" ? undefined : Number(v) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un client existant..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Aucun client lié —</SelectItem>
-                    {partners.map(p => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.companyName || p.name}
-                        {p.companyName && p.name !== p.companyName && ` (${p.name})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ReactSelect
+                  options={partnerOptions}
+                  value={partnerOptions.find(o => o.value === (form.partnerId ? String(form.partnerId) : "")) ?? partnerOptions[0]}
+                  onChange={opt => setForm(f => ({ ...f, partnerId: opt?.value ? Number(opt.value) : undefined }))}
+                  placeholder="Rechercher un client..."
+                  styles={rsStyles}
+                  noOptionsMessage={() => "Aucun client trouvé"}
+                  isSearchable
+                />
                 {partners.length === 0 && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Aucun client trouvé. Créez-en un dans le module Facturation → Clients.
+                    Aucun client trouvé. Créez-en un dans Facturation → Clients.
                   </p>
                 )}
               </div>
 
+              {/* Type de consultation — react-select */}
               <div>
                 <Label>Type de consultation</Label>
-                <Select value={form.type ?? ""} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
-                  <SelectContent>
-                    {consultationTypes.map(t => (
-                      <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ReactSelect
+                  options={consultationTypeOptions}
+                  value={consultationTypeOptions.find(o => o.value === form.type) ?? null}
+                  onChange={opt => setForm(f => ({ ...f, type: opt?.value ?? "" }))}
+                  placeholder="Sélectionner..."
+                  styles={rsStyles}
+                  isSearchable
+                />
               </div>
               <div>
                 <Label>Référence client</Label>
@@ -377,13 +450,13 @@ export default function Consultations() {
                   onChange={e => setForm(f => ({ ...f, deadlineAt: e.target.value }))} />
               </div>
               <div>
-                <Label>Montant estimé (MRU)</Label>
+                <Label>Montant estimé</Label>
                 <Input type="number" value={form.estimatedAmount ?? ""} placeholder="0"
                   onChange={e => setForm(f => ({ ...f, estimatedAmount: e.target.value }))} />
               </div>
             </div>
 
-            {/* Types de prestations dynamiques */}
+            {/* Types de prestations */}
             <div>
               <Label className="mb-2 block">
                 Types de prestations
@@ -508,6 +581,11 @@ export default function Consultations() {
                   <p className="text-sm">{detailItem.notes}</p>
                 </div>
               )}
+
+              {/* Pièces jointes */}
+              <div className="border-t pt-4">
+                <AttachmentsPanel entityType="consultation" entityId={detailItem.id} />
+              </div>
 
               <div className="flex gap-2 pt-2 border-t">
                 <Button variant="destructive" size="sm" onClick={() => handleDelete(detailItem.id)}>
