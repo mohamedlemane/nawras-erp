@@ -1,6 +1,6 @@
 import { useState } from "react";
 import ReactSelect from "react-select";
-import { rsStyles } from "@/lib/rs-styles";
+import { rsClassNames, rsClassNamesCompact, rsPortalStyles } from "@/lib/rs-styles";
 import { useListProformas, useListPartners, useListProducts, createProforma } from "@workspace/api-client-react";
 import type { CreateProformaBody, DocumentItemInput } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -133,7 +133,9 @@ export default function ProformasList() {
               <div>
                 <Label>Client</Label>
                 <ReactSelect
-                  styles={rsStyles}
+                  unstyled
+                  classNames={rsClassNames}
+                  styles={rsPortalStyles}
                   isClearable
                   placeholder="Rechercher un client..."
                   noOptionsMessage={() => "Aucun client trouvé"}
@@ -165,7 +167,9 @@ export default function ProformasList() {
                     <tr key={idx} className="border-t">
                       <td className="px-2 py-1">
                         <ReactSelect
-                          styles={{ ...rsStyles, control: (b: any, s: any) => ({ ...rsStyles.control(b, s), minHeight: "32px", fontSize: "12px" }), valueContainer: (b: any) => ({ ...b, padding: "0 6px" }), dropdownIndicator: (b: any) => ({ ...b, padding: "2px" }) }}
+                          unstyled
+                          classNames={rsClassNamesCompact}
+                          styles={rsPortalStyles}
                           isClearable
                           placeholder="Libre..."
                           noOptionsMessage={() => "Aucun produit"}

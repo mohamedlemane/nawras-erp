@@ -1,6 +1,6 @@
 import { useState } from "react";
 import ReactSelect from "react-select";
-import { rsStyles } from "@/lib/rs-styles";
+import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 import { useListContracts, useListEmployees, createContract } from "@workspace/api-client-react";
 import type { CreateContractBody, CreateContractBodyContractType } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -98,7 +98,9 @@ export default function ContractsList() {
             <div>
               <Label>Employé *</Label>
               <ReactSelect
-                styles={rsStyles}
+                unstyled
+                classNames={rsClassNames}
+                styles={rsPortalStyles}
                 placeholder="Rechercher un employé..."
                 noOptionsMessage={() => "Aucun employé trouvé"}
                 options={employeesData?.data?.map(e => ({ value: e.id, label: `${e.firstName} ${e.lastName}` })) ?? []}

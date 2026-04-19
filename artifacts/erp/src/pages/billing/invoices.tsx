@@ -1,6 +1,6 @@
 import { useState } from "react";
 import ReactSelect from "react-select";
-import { rsStyles } from "@/lib/rs-styles";
+import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 import { useListInvoices, useListPartners, useListProducts, createInvoice } from "@workspace/api-client-react";
 import type { CreateInvoiceBody, DocumentItemInput } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -147,7 +147,9 @@ export default function InvoicesList() {
               <div>
                 <Label>Client</Label>
                 <ReactSelect
-                  styles={rsStyles}
+                  unstyled
+                  classNames={rsClassNames}
+                  styles={rsPortalStyles}
                   isClearable
                   placeholder="Rechercher un client..."
                   noOptionsMessage={() => "Aucun client trouvé"}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import ReactSelect from "react-select";
-import { rsStyles } from "@/lib/rs-styles";
+import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 import { useListEmployees, useListDepartments, useListPositions, createEmployee, updateEmployee } from "@workspace/api-client-react";
 import type { CreateEmployeeBody, Employee } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -167,7 +167,9 @@ export default function EmployeesList() {
             <div>
               <Label>Département</Label>
               <ReactSelect
-                styles={rsStyles}
+                unstyled
+                classNames={rsClassNames}
+                styles={rsPortalStyles}
                 isClearable
                 placeholder="Rechercher un département..."
                 noOptionsMessage={() => "Aucun département trouvé"}
@@ -179,7 +181,9 @@ export default function EmployeesList() {
             <div>
               <Label>Poste</Label>
               <ReactSelect
-                styles={rsStyles}
+                unstyled
+                classNames={rsClassNames}
+                styles={rsPortalStyles}
                 isClearable
                 placeholder="Rechercher un poste..."
                 noOptionsMessage={() => "Aucun poste trouvé"}

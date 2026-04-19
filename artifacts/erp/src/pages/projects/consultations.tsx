@@ -16,31 +16,10 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { AttachmentsPanel } from "@/components/projects/AttachmentsPanel";
+import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 const PAGE_SIZE = 10;
-
-// Styles react-select compatibles shadcn/ui
-const rsStyles = {
-  control: (base: any, state: any) => ({
-    ...base,
-    minHeight: "36px",
-    borderRadius: "6px",
-    borderColor: state.isFocused ? "hsl(var(--ring))" : "hsl(var(--input))",
-    boxShadow: state.isFocused ? "0 0 0 2px hsl(var(--ring) / 0.2)" : "none",
-    backgroundColor: "hsl(var(--background))",
-    fontSize: "14px",
-  }),
-  menu: (base: any) => ({ ...base, zIndex: 50, borderRadius: "8px", fontSize: "14px" }),
-  option: (base: any, state: any) => ({
-    ...base,
-    backgroundColor: state.isSelected ? "hsl(var(--primary))" : state.isFocused ? "hsl(var(--muted))" : "transparent",
-    color: state.isSelected ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
-  }),
-  singleValue: (base: any) => ({ ...base, color: "hsl(var(--foreground))" }),
-  placeholder: (base: any) => ({ ...base, color: "hsl(var(--muted-foreground))" }),
-  input: (base: any) => ({ ...base, color: "hsl(var(--foreground))" }),
-};
 
 const DEFAULT_SERVICE_TYPES = [
   { code: "geotechnique", label: "Géotechnique" },
@@ -417,7 +396,9 @@ export default function Consultations() {
                   value={partnerOptions.find(o => o.value === (form.partnerId ? String(form.partnerId) : "")) ?? partnerOptions[0]}
                   onChange={opt => setForm(f => ({ ...f, partnerId: opt?.value ? Number(opt.value) : undefined }))}
                   placeholder="Rechercher un client..."
-                  styles={rsStyles}
+                  unstyled
+                  classNames={rsClassNames}
+                  styles={rsPortalStyles}
                   noOptionsMessage={() => "Aucun client trouvé"}
                   isSearchable
                 />
@@ -436,7 +417,9 @@ export default function Consultations() {
                   value={consultationTypeOptions.find(o => o.value === form.type) ?? null}
                   onChange={opt => setForm(f => ({ ...f, type: opt?.value ?? "" }))}
                   placeholder="Sélectionner..."
-                  styles={rsStyles}
+                  unstyled
+                  classNames={rsClassNames}
+                  styles={rsPortalStyles}
                   isSearchable
                 />
               </div>

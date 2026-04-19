@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import ReactSelect from "react-select";
-import { rsStyles } from "@/lib/rs-styles";
+import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 import { useListPayments, useListInvoices, createPayment } from "@workspace/api-client-react";
 import type { CreatePaymentBody, CreatePaymentBodyPaymentMethod } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -187,7 +187,9 @@ export default function PaymentsList() {
             <div>
               <Label>Facture *</Label>
               <ReactSelect
-                styles={rsStyles}
+                unstyled
+                classNames={rsClassNames}
+                styles={rsPortalStyles}
                 placeholder="Rechercher une facture impayée..."
                 noOptionsMessage={() => unpaidInvoices.length === 0 ? "Aucune facture impayée" : "Aucun résultat"}
                 options={unpaidInvoices.map(inv => ({
