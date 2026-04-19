@@ -56,6 +56,7 @@ const NAV_ITEMS = [
     items: [
       { title: "Consultations / RFQ", href: "/projects/consultations", icon: ClipboardList },
       { title: "Projets en cours",    href: "/projects/list",         icon: FolderKanban },
+      { title: "Paramètres",          href: "/projects/settings",     icon: Settings },
     ],
   },
   {

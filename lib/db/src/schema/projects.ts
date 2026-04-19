@@ -1,31 +1,53 @@
 import { boolean, decimal, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { companiesTable } from "./companies";
 import { partnersTable } from "./billing";
+import { employeesTable } from "./hr";
+
+// ── Types de prestations paramétrables ───────────────────────────────────────
+export const projectServiceTypesTable = pgTable("project_service_types", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 50 }).notNull(),
+  label: varchar("label", { length: 150 }).notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+// ── Types de consultation paramétrables ───────────────────────────────────────
+export const consultationTypesTable = pgTable("consultation_types", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 50 }).notNull(),
+  label: varchar("label", { length: 150 }).notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
 
 // ── Consultations / RFQ ───────────────────────────────────────────────────────
-// Une consultation = demande entrante d'un client (RFQ/RFP)
 export const consultationsTable = pgTable("consultations", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
 
-  reference: varchar("reference", { length: 50 }),                   // RFQ-2025-001
-  title: text("title").notNull(),                                     // Objet de la consultation
-  partnerId: integer("partner_id").references(() => partnersTable.id), // Client demandeur
-  clientRef: varchar("client_ref", { length: 100 }),                  // Référence client
-  type: varchar("type", { length: 50 }).notNull().default("rfq"),    // rfq | rfp | appel_offre | gre_a_gre
+  reference: varchar("reference", { length: 50 }),
+  title: text("title").notNull(),
+  partnerId: integer("partner_id").references(() => partnersTable.id),
+  clientRef: varchar("client_ref", { length: 100 }),
+  type: varchar("type", { length: 50 }).notNull().default("rfq"),
 
-  // Types de prestations demandées
-  serviceTypes: text("service_types"),                               // JSON array: ["geotechnique","bathymetrie","essais",...]
+  serviceTypes: text("service_types"),
 
   description: text("description"),
   receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
-  deadlineAt: timestamp("deadline_at", { withTimezone: true }),       // Date limite de réponse
+  deadlineAt: timestamp("deadline_at", { withTimezone: true }),
 
-  // Statut du processus commercial
   status: varchar("status", { length: 30 }).notNull().default("recu"),
-  // recu → en_etude → proposition_envoyee → en_negociation → attribue | perdu | annule
 
-  // Résultat
   awardedAt: timestamp("awarded_at", { withTimezone: true }),
   lostReason: text("lost_reason"),
   estimatedAmount: decimal("estimated_amount", { precision: 14, scale: 2 }),
@@ -39,49 +61,42 @@ export const consultationsTable = pgTable("consultations", {
 });
 
 // ── Projets ───────────────────────────────────────────────────────────────────
-// Un projet = consultation attribuée → réalisation → facturation
 export const projectsTable = pgTable("projects", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
 
-  reference: varchar("reference", { length: 50 }),                   // PRJ-2025-001
+  reference: varchar("reference", { length: 50 }),
   title: text("title").notNull(),
   consultationId: integer("consultation_id").references(() => consultationsTable.id),
-  partnerId: integer("partner_id").references(() => partnersTable.id), // Client
+  partnerId: integer("partner_id").references(() => partnersTable.id),
 
-  // Types de prestations réalisées
-  serviceTypes: text("service_types"),                               // JSON array
+  serviceTypes: text("service_types"),
 
-  // Statut projet
   status: varchar("status", { length: 30 }).notNull().default("preparation"),
-  // preparation → mobilisation → en_cours → suspendu → achevement → facture | clot
 
-  // Dates
   startDate: timestamp("start_date", { withTimezone: true }),
   endDatePlanned: timestamp("end_date_planned", { withTimezone: true }),
   endDateActual: timestamp("end_date_actual", { withTimezone: true }),
 
-  // Valeur contractuelle
   contractAmount: decimal("contract_amount", { precision: 14, scale: 2 }),
   currency: varchar("currency", { length: 10 }).notNull().default("MRU"),
 
-  // Responsables
-  commercialManager: varchar("commercial_manager"),                  // Nom ou ID utilisateur
+  // Responsables (varchar pour affichage + FK employé)
+  commercialManager: varchar("commercial_manager"),
+  commercialManagerId: integer("commercial_manager_id").references(() => employeesTable.id, { onDelete: "set null" }),
   technicalManager: varchar("technical_manager"),
+  technicalManagerId: integer("technical_manager_id").references(() => employeesTable.id, { onDelete: "set null" }),
   hseManager: varchar("hse_manager"),
+  hseManagerId: integer("hse_manager_id").references(() => employeesTable.id, { onDelete: "set null" }),
 
-  // Documents & cahier des charges
-  specifications: text("specifications"),                            // Résumé du cahier des charges
-  contractualTerms: text("contractual_terms"),                       // Conditions contractuelles
+  specifications: text("specifications"),
+  contractualTerms: text("contractual_terms"),
 
-  // Localisation
   onshore: boolean("onshore").notNull().default(true),
   offshore: boolean("offshore").notNull().default(false),
-  location: text("location"),                                        // Description géographique
+  location: text("location"),
 
-  // Facturation
   billingStatus: varchar("billing_status", { length: 30 }).notNull().default("non_facture"),
-  // non_facture | en_cours | partiellement_facture | facture | regle
 
   notes: text("notes"),
   createdBy: varchar("created_by"),
@@ -91,18 +106,16 @@ export const projectsTable = pgTable("projects", {
 });
 
 // ── Sites de projet ───────────────────────────────────────────────────────────
-// Un projet peut avoir plusieurs sites (onshore / offshore)
 export const projectSitesTable = pgTable("project_sites", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull().references(() => projectsTable.id, { onDelete: "cascade" }),
 
-  name: text("name").notNull(),                                       // Nom du site
-  type: varchar("type", { length: 20 }).notNull().default("onshore"), // onshore | offshore
-  location: text("location"),                                         // Coordonnées / description
-  waterDepth: decimal("water_depth", { precision: 8, scale: 2 }),    // Profondeur eau (offshore)
+  name: text("name").notNull(),
+  type: varchar("type", { length: 20 }).notNull().default("onshore"),
+  location: text("location"),
+  waterDepth: decimal("water_depth", { precision: 8, scale: 2 }),
 
   status: varchar("status", { length: 20 }).notNull().default("planifie"),
-  // planifie | mobilisation | en_cours | termine
 
   plannedStart: timestamp("planned_start", { withTimezone: true }),
   plannedEnd: timestamp("planned_end", { withTimezone: true }),
@@ -120,27 +133,31 @@ export const projectReportsTable = pgTable("project_reports", {
   projectId: integer("project_id").notNull().references(() => projectsTable.id, { onDelete: "cascade" }),
   siteId: integer("site_id").references(() => projectSitesTable.id),
 
-  reference: varchar("reference", { length: 50 }),                   // RPT-2025-001
+  reference: varchar("reference", { length: 50 }),
   type: varchar("type", { length: 30 }).notNull().default("avancement"),
-  // avancement | journalier | hebdomadaire | final | hse | incident
 
   title: text("title").notNull(),
   reportDate: timestamp("report_date", { withTimezone: true }).notNull().defaultNow(),
   periodStart: timestamp("period_start", { withTimezone: true }),
   periodEnd: timestamp("period_end", { withTimezone: true }),
 
-  // Contenu
-  summary: text("summary"),                                          // Résumé des travaux
-  progressPercent: integer("progress_percent").notNull().default(0), // 0-100
+  summary: text("summary"),
+  progressPercent: integer("progress_percent").notNull().default(0),
   issuesEncountered: text("issues_encountered"),
   nextSteps: text("next_steps"),
-  hseObservations: text("hse_observations"),                         // Observations HSE
+  hseObservations: text("hse_observations"),
 
-  author: varchar("author"),                                         // Auteur du rapport
+  author: varchar("author"),
   status: varchar("status", { length: 20 }).notNull().default("brouillon"),
-  // brouillon | soumis | valide | transmis_client
 
   createdBy: varchar("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
+
+export type ProjectServiceType = typeof projectServiceTypesTable.$inferSelect;
+export type ConsultationType = typeof consultationTypesTable.$inferSelect;
+export type Consultation = typeof consultationsTable.$inferSelect;
+export type Project = typeof projectsTable.$inferSelect;
+export type ProjectSite = typeof projectSitesTable.$inferSelect;
+export type ProjectReport = typeof projectReportsTable.$inferSelect;

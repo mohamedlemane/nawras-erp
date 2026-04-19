@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, desc, and, sql } from "drizzle-orm";
-import { db, consultationsTable, projectsTable, projectSitesTable, projectReportsTable } from "@workspace/db";
+import { db, consultationsTable, projectsTable, projectSitesTable, projectReportsTable, employeesTable } from "@workspace/db";
 import { requirePermission } from "../lib/rbac";
 
 const router: IRouter = Router();
@@ -134,10 +134,34 @@ router.post("/projects", requirePermission("create_invoice"), async (req: Reques
   const cid = req.user!.company!.companyId;
   const {
     title, consultationId, partnerId, serviceTypes, startDate, endDatePlanned,
-    contractAmount, currency, commercialManager, technicalManager, hseManager,
+    contractAmount, currency,
+    commercialManager, commercialManagerId,
+    technicalManager, technicalManagerId,
+    hseManager, hseManagerId,
     specifications, contractualTerms, onshore, offshore, location, notes,
   } = req.body;
   if (!title) { res.status(400).json({ error: "Titre requis" }); return; }
+
+  // Résoudre les noms depuis les IDs employés si fournis
+  let resolvedCommercial = commercialManager ?? null;
+  let resolvedTechnical = technicalManager ?? null;
+  let resolvedHse = hseManager ?? null;
+
+  if (commercialManagerId) {
+    const [emp] = await db.select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
+      .from(employeesTable).where(eq(employeesTable.id, Number(commercialManagerId)));
+    if (emp) resolvedCommercial = `${emp.firstName} ${emp.lastName}`;
+  }
+  if (technicalManagerId) {
+    const [emp] = await db.select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
+      .from(employeesTable).where(eq(employeesTable.id, Number(technicalManagerId)));
+    if (emp) resolvedTechnical = `${emp.firstName} ${emp.lastName}`;
+  }
+  if (hseManagerId) {
+    const [emp] = await db.select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
+      .from(employeesTable).where(eq(employeesTable.id, Number(hseManagerId)));
+    if (emp) resolvedHse = `${emp.firstName} ${emp.lastName}`;
+  }
 
   const [row] = await db.insert(projectsTable).values({
     companyId: cid,
@@ -150,9 +174,12 @@ router.post("/projects", requirePermission("create_invoice"), async (req: Reques
     endDatePlanned: endDatePlanned ? new Date(endDatePlanned) : null,
     contractAmount: contractAmount ?? null,
     currency: currency ?? "MRU",
-    commercialManager: commercialManager ?? null,
-    technicalManager: technicalManager ?? null,
-    hseManager: hseManager ?? null,
+    commercialManager: resolvedCommercial,
+    commercialManagerId: commercialManagerId ? Number(commercialManagerId) : null,
+    technicalManager: resolvedTechnical,
+    technicalManagerId: technicalManagerId ? Number(technicalManagerId) : null,
+    hseManager: resolvedHse,
+    hseManagerId: hseManagerId ? Number(hseManagerId) : null,
     specifications: specifications ?? null,
     contractualTerms: contractualTerms ?? null,
     onshore: onshore !== false,
@@ -173,20 +200,41 @@ router.patch("/projects/:id", requirePermission("create_invoice"), async (req: R
   if (!exists) { res.status(404).json({ error: "Projet introuvable" }); return; }
 
   const allowed = ["title", "partnerId", "serviceTypes", "status", "startDate", "endDatePlanned",
-    "endDateActual", "contractAmount", "currency", "commercialManager", "technicalManager",
-    "hseManager", "specifications", "contractualTerms", "onshore", "offshore", "location",
+    "endDateActual", "contractAmount", "currency",
+    "commercialManager", "commercialManagerId",
+    "technicalManager", "technicalManagerId",
+    "hseManager", "hseManagerId",
+    "specifications", "contractualTerms", "onshore", "offshore", "location",
     "billingStatus", "notes"];
   const updates: Record<string, unknown> = {};
   for (const k of allowed) {
     if (k in req.body) {
       let v = req.body[k];
       if (k === "serviceTypes" && Array.isArray(v)) v = JSON.stringify(v);
-      if (k === "partnerId") v = v ? Number(v) : null;
+      if (["partnerId", "commercialManagerId", "technicalManagerId", "hseManagerId"].includes(k)) v = v ? Number(v) : null;
       if (["startDate","endDatePlanned","endDateActual"].includes(k) && v) v = new Date(v);
       const dbKey = k.replace(/([A-Z])/g, "_$1").toLowerCase();
       (updates as any)[dbKey] = v;
     }
   }
+
+  // Résoudre les noms depuis les IDs si fournis
+  if ("commercialManagerId" in req.body && req.body.commercialManagerId) {
+    const [emp] = await db.select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
+      .from(employeesTable).where(eq(employeesTable.id, Number(req.body.commercialManagerId)));
+    if (emp) updates.commercial_manager = `${emp.firstName} ${emp.lastName}`;
+  }
+  if ("technicalManagerId" in req.body && req.body.technicalManagerId) {
+    const [emp] = await db.select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
+      .from(employeesTable).where(eq(employeesTable.id, Number(req.body.technicalManagerId)));
+    if (emp) updates.technical_manager = `${emp.firstName} ${emp.lastName}`;
+  }
+  if ("hseManagerId" in req.body && req.body.hseManagerId) {
+    const [emp] = await db.select({ firstName: employeesTable.firstName, lastName: employeesTable.lastName })
+      .from(employeesTable).where(eq(employeesTable.id, Number(req.body.hseManagerId)));
+    if (emp) updates.hse_manager = `${emp.firstName} ${emp.lastName}`;
+  }
+
   updates.updated_by = req.user!.id;
 
   const [row] = await db.update(projectsTable).set(updates as any).where(eq(projectsTable.id, id)).returning();

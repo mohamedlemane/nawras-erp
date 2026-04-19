@@ -11,6 +11,7 @@ import hrRouter from "./hr";
 import dashboardRouter from "./dashboard";
 import auditRouter from "./audit";
 import projectsRouter from "./projects";
+import projectSettingsRouter from "./project-settings";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(hrRouter);
 router.use(dashboardRouter);
 router.use(auditRouter);
 router.use(projectsRouter);
+router.use(projectSettingsRouter);
 
 export default router;

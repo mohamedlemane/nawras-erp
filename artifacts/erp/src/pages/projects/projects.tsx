@@ -10,39 +10,39 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FolderKanban, Anchor, Mountain, Search, ChevronRight, Activity } from "lucide-react";
+import { Plus, FolderKanban, Anchor, Mountain, Search, ChevronRight, Activity, User } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
-const SERVICE_TYPES = [
-  { value: "geotechnique", label: "Géotechnique" },
-  { value: "bathymetrie", label: "Bathymétrie" },
-  { value: "essais", label: "Essais en laboratoire" },
-  { value: "topographie", label: "Topographie" },
-  { value: "inspection", label: "Inspection sous-marine" },
-  { value: "environnement", label: "Étude environnementale" },
-  { value: "structure", label: "Ingénierie structurale" },
-  { value: "autre", label: "Autre" },
+const DEFAULT_SERVICE_TYPES = [
+  { code: "geotechnique", label: "Géotechnique" },
+  { code: "bathymetrie", label: "Bathymétrie" },
+  { code: "essais", label: "Essais en laboratoire" },
+  { code: "topographie", label: "Topographie" },
+  { code: "inspection", label: "Inspection sous-marine" },
+  { code: "environnement", label: "Étude environnementale" },
+  { code: "structure", label: "Ingénierie structurale" },
+  { code: "autre", label: "Autre" },
 ];
 
-const STATUS_MAP: Record<string, { label: string; color: string; step: number }> = {
-  preparation:  { label: "Préparation",   color: "bg-blue-100 text-blue-700",    step: 0 },
-  mobilisation: { label: "Mobilisation",  color: "bg-yellow-100 text-yellow-700", step: 1 },
-  en_cours:     { label: "En cours",      color: "bg-green-100 text-green-700",  step: 2 },
-  suspendu:     { label: "Suspendu",      color: "bg-red-100 text-red-700",      step: 2 },
-  achevement:   { label: "Achèvement",    color: "bg-teal-100 text-teal-700",    step: 3 },
-  facture:      { label: "Facturé",       color: "bg-purple-100 text-purple-700", step: 4 },
-  clot:         { label: "Clôturé",       color: "bg-gray-100 text-gray-600",    step: 5 },
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  preparation:  { label: "Préparation",   color: "bg-blue-100 text-blue-700" },
+  mobilisation: { label: "Mobilisation",  color: "bg-yellow-100 text-yellow-700" },
+  en_cours:     { label: "En cours",      color: "bg-green-100 text-green-700" },
+  suspendu:     { label: "Suspendu",      color: "bg-red-100 text-red-700" },
+  achevement:   { label: "Achèvement",    color: "bg-teal-100 text-teal-700" },
+  facture:      { label: "Facturé",       color: "bg-purple-100 text-purple-700" },
+  clot:         { label: "Clôturé",       color: "bg-gray-100 text-gray-600" },
 };
 
 const BILLING_MAP: Record<string, { label: string; color: string }> = {
-  non_facture:           { label: "Non facturé",          color: "bg-gray-100 text-gray-600" },
-  partiellement_facture: { label: "Part. facturé",        color: "bg-orange-100 text-orange-700" },
-  facture:               { label: "Facturé",              color: "bg-green-100 text-green-700" },
-  regle:                 { label: "Réglé",                color: "bg-blue-100 text-blue-700" },
+  non_facture:           { label: "Non facturé",   color: "bg-gray-100 text-gray-600" },
+  partiellement_facture: { label: "Part. facturé", color: "bg-orange-100 text-orange-700" },
+  facture:               { label: "Facturé",       color: "bg-green-100 text-green-700" },
+  regle:                 { label: "Réglé",         color: "bg-blue-100 text-blue-700" },
 };
 
 async function apiFetch(path: string, opts?: RequestInit) {
@@ -57,9 +57,18 @@ interface Project {
   partnerId?: number; serviceTypes?: string; startDate?: string;
   endDatePlanned?: string; contractAmount?: string; currency: string;
   onshore: boolean; offshore: boolean; location?: string;
-  commercialManager?: string; technicalManager?: string; hseManager?: string;
+  commercialManager?: string; commercialManagerId?: number;
+  technicalManager?: string; technicalManagerId?: number;
+  hseManager?: string; hseManagerId?: number;
   billingStatus: string; notes?: string;
 }
+
+interface Employee {
+  id: number; firstName: string; lastName: string;
+  positionId?: number; positionName?: string;
+}
+
+interface PType { id: number; code: string; label: string; isActive: boolean; }
 
 const EMPTY: Partial<Project> = {
   title: "", status: "preparation", currency: "MRU", onshore: true, offshore: false,
@@ -75,12 +84,37 @@ export default function Projects() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
 
+  // ── Data fetching ──────────────────────────────────────────────────────────
   const { data, isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: () => apiFetch(`${BASE}/api/projects`),
   });
+  const { data: employeesData } = useQuery({
+    queryKey: ["employees-all"],
+    queryFn: () => apiFetch(`${BASE}/api/employees?limit=200`),
+  });
+  const { data: positionsData } = useQuery({
+    queryKey: ["positions"],
+    queryFn: () => apiFetch(`${BASE}/api/positions`),
+  });
+  const { data: serviceTypesData } = useQuery<PType[]>({
+    queryKey: ["project-service-types"],
+    queryFn: () => apiFetch(`${BASE}/api/project-service-types`),
+  });
 
   const projects: Project[] = data?.data ?? [];
+  const rawEmployees: Employee[] = employeesData?.data ?? employeesData ?? [];
+  const positions: { id: number; name: string }[] = positionsData ?? [];
+
+  // Enrichir les employés avec le nom de poste
+  const employees: Employee[] = rawEmployees.map(e => ({
+    ...e,
+    positionName: positions.find(p => p.id === e.positionId)?.name,
+  }));
+
+  const serviceTypes = (serviceTypesData && serviceTypesData.length > 0)
+    ? serviceTypesData.filter(t => t.isActive).map(t => ({ code: t.code, label: t.label }))
+    : DEFAULT_SERVICE_TYPES;
 
   const filtered = projects.filter(p => {
     const q = search.toLowerCase();
@@ -98,6 +132,30 @@ export default function Projects() {
 
   function toggleService(v: string) {
     setSelectedServices(s => s.includes(v) ? s.filter(x => x !== v) : [...s, v]);
+  }
+
+  function getServiceLabel(code: string): string {
+    return serviceTypes.find(x => x.code === code)?.label ?? code;
+  }
+
+  function getEmployeeFullName(id?: number): string {
+    if (!id) return "";
+    const e = employees.find(x => x.id === id);
+    return e ? `${e.firstName} ${e.lastName}` : "";
+  }
+
+  function handleEmployeeSelect(field: "commercial" | "technical" | "hse", empId: string) {
+    if (empId === "none") {
+      if (field === "commercial") setForm(f => ({ ...f, commercialManagerId: undefined, commercialManager: undefined }));
+      if (field === "technical") setForm(f => ({ ...f, technicalManagerId: undefined, technicalManager: undefined }));
+      if (field === "hse") setForm(f => ({ ...f, hseManagerId: undefined, hseManager: undefined }));
+      return;
+    }
+    const id = Number(empId);
+    const name = getEmployeeFullName(id);
+    if (field === "commercial") setForm(f => ({ ...f, commercialManagerId: id, commercialManager: name }));
+    if (field === "technical") setForm(f => ({ ...f, technicalManagerId: id, technicalManager: name }));
+    if (field === "hse") setForm(f => ({ ...f, hseManagerId: id, hseManager: name }));
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -126,7 +184,7 @@ export default function Projects() {
           <h1 className="text-2xl font-bold">Projets</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Réalisation des prestations attribuées</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
+        <Button onClick={() => { setForm(EMPTY); setSelectedServices([]); setCreateOpen(true); }} className="gap-2">
           <Plus className="w-4 h-4" /> Nouveau projet
         </Button>
       </div>
@@ -179,10 +237,10 @@ export default function Projects() {
                 <TableHead>Référence</TableHead>
                 <TableHead>Projet</TableHead>
                 <TableHead>Prestations</TableHead>
-                <TableHead>Localisation</TableHead>
+                <TableHead>Responsables</TableHead>
                 <TableHead>Dates</TableHead>
                 <TableHead>Montant</TableHead>
-                <TableHead>Avancement</TableHead>
+                <TableHead>Statut</TableHead>
                 <TableHead>Facturation</TableHead>
                 <TableHead />
               </TableRow>
@@ -209,32 +267,28 @@ export default function Projects() {
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {services.slice(0, 2).map(s => (
-                          <Badge key={s} variant="secondary" className="text-xs">
-                            {SERVICE_TYPES.find(x => x.value === s)?.label ?? s}
-                          </Badge>
+                          <Badge key={s} variant="secondary" className="text-xs">{getServiceLabel(s)}</Badge>
                         ))}
                         {services.length > 2 && <Badge variant="secondary" className="text-xs">+{services.length - 2}</Badge>}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{p.location || "—"}</TableCell>
+                    <TableCell className="text-xs space-y-0.5">
+                      {p.commercialManager && <div className="flex items-center gap-1 text-muted-foreground"><User className="w-3 h-3" /><span>Com: {p.commercialManager}</span></div>}
+                      {p.technicalManager && <div className="text-muted-foreground">Tec: {p.technicalManager}</div>}
+                      {p.hseManager && <div className="text-muted-foreground">HSE: {p.hseManager}</div>}
+                    </TableCell>
                     <TableCell className="text-xs">
                       {p.startDate && <div>Début: {format(new Date(p.startDate), "dd/MM/yy")}</div>}
                       {p.endDatePlanned && <div className="text-muted-foreground">Fin prév: {format(new Date(p.endDatePlanned), "dd/MM/yy")}</div>}
                     </TableCell>
                     <TableCell className="text-sm font-medium">
-                      {p.contractAmount
-                        ? `${Number(p.contractAmount).toLocaleString("fr-FR")} ${p.currency}`
-                        : "—"}
+                      {p.contractAmount ? `${Number(p.contractAmount).toLocaleString("fr-FR")} ${p.currency}` : "—"}
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${st.color}`}>
-                        {st.label}
-                      </span>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${st.color}`}>{st.label}</span>
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${bs.color}`}>
-                        {bs.label}
-                      </span>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${bs.color}`}>{bs.label}</span>
                     </TableCell>
                     <TableCell>
                       <Link href={`/projects/${p.id}`}>
@@ -261,6 +315,7 @@ export default function Projects() {
                 <Label>Titre du projet *</Label>
                 <Input value={form.title ?? ""} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
               </div>
+
               <div>
                 <Label>Date de début</Label>
                 <Input type="date" value={form.startDate?.substring(0, 10) ?? ""}
@@ -287,18 +342,75 @@ export default function Projects() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Responsable commercial</Label>
-                <Input value={form.commercialManager ?? ""} onChange={e => setForm(f => ({ ...f, commercialManager: e.target.value }))} />
+
+              {/* Responsables depuis GRH */}
+              <div className="col-span-2 border-t pt-3">
+                <p className="text-sm font-medium text-muted-foreground mb-2">Responsables du projet (depuis GRH)</p>
               </div>
+
               <div>
-                <Label>Responsable technique</Label>
-                <Input value={form.technicalManager ?? ""} onChange={e => setForm(f => ({ ...f, technicalManager: e.target.value }))} />
+                <Label className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-blue-600" />Responsable commercial</Label>
+                <Select
+                  value={form.commercialManagerId ? String(form.commercialManagerId) : "none"}
+                  onValueChange={v => handleEmployeeSelect("commercial", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un employé..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Aucun —</SelectItem>
+                    {employees.map(e => (
+                      <SelectItem key={e.id} value={String(e.id)}>
+                        {e.firstName} {e.lastName}
+                        {e.positionName && <span className="text-muted-foreground"> — {e.positionName}</span>}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
               <div>
-                <Label>Responsable HSE</Label>
-                <Input value={form.hseManager ?? ""} onChange={e => setForm(f => ({ ...f, hseManager: e.target.value }))} />
+                <Label className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-green-600" />Responsable technique</Label>
+                <Select
+                  value={form.technicalManagerId ? String(form.technicalManagerId) : "none"}
+                  onValueChange={v => handleEmployeeSelect("technical", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un employé..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Aucun —</SelectItem>
+                    {employees.map(e => (
+                      <SelectItem key={e.id} value={String(e.id)}>
+                        {e.firstName} {e.lastName}
+                        {e.positionName && <span className="text-muted-foreground"> — {e.positionName}</span>}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
+              <div>
+                <Label className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-orange-600" />Responsable HSE</Label>
+                <Select
+                  value={form.hseManagerId ? String(form.hseManagerId) : "none"}
+                  onValueChange={v => handleEmployeeSelect("hse", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un employé..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Aucun —</SelectItem>
+                    {employees.map(e => (
+                      <SelectItem key={e.id} value={String(e.id)}>
+                        {e.firstName} {e.lastName}
+                        {e.positionName && <span className="text-muted-foreground"> — {e.positionName}</span>}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <Label>Localisation générale</Label>
                 <Input value={form.location ?? ""} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Ex: Golfe de Nouadhibou" />
@@ -318,14 +430,22 @@ export default function Projects() {
               </label>
             </div>
 
+            {/* Types de prestations dynamiques */}
             <div>
-              <Label className="mb-2 block">Types de prestations</Label>
+              <Label className="mb-2 block">
+                Types de prestations
+                {serviceTypes === DEFAULT_SERVICE_TYPES && (
+                  <span className="ml-2 text-xs text-muted-foreground font-normal">
+                    (valeurs par défaut — configurez dans Paramètres)
+                  </span>
+                )}
+              </Label>
               <div className="grid grid-cols-2 gap-2">
-                {SERVICE_TYPES.map(s => (
-                  <label key={s.value} className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer text-sm transition-colors
-                    ${selectedServices.includes(s.value) ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}>
-                    <input type="checkbox" className="rounded" checked={selectedServices.includes(s.value)}
-                      onChange={() => toggleService(s.value)} />
+                {serviceTypes.map(s => (
+                  <label key={s.code} className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer text-sm transition-colors
+                    ${selectedServices.includes(s.code) ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}>
+                    <input type="checkbox" className="rounded" checked={selectedServices.includes(s.code)}
+                      onChange={() => toggleService(s.code)} />
                     {s.label}
                   </label>
                 ))}

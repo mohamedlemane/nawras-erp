@@ -10,22 +10,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FileText, Search, ChevronRight, TrendingUp, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, FileText, Search, ChevronRight, TrendingUp, Clock, CheckCircle2, XCircle, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
-const SERVICE_TYPES = [
-  { value: "geotechnique", label: "Géotechnique" },
-  { value: "bathymetrie", label: "Bathymétrie" },
-  { value: "essais", label: "Essais en laboratoire" },
-  { value: "topographie", label: "Topographie" },
-  { value: "inspection", label: "Inspection sous-marine" },
-  { value: "environnement", label: "Étude environnementale" },
-  { value: "structure", label: "Ingénierie structurale" },
-  { value: "autre", label: "Autre" },
+// Valeurs par défaut (utilisées si aucune n'est configurée dans les paramètres)
+const DEFAULT_SERVICE_TYPES = [
+  { code: "geotechnique", label: "Géotechnique" },
+  { code: "bathymetrie", label: "Bathymétrie" },
+  { code: "essais", label: "Essais en laboratoire" },
+  { code: "topographie", label: "Topographie" },
+  { code: "inspection", label: "Inspection sous-marine" },
+  { code: "environnement", label: "Étude environnementale" },
+  { code: "structure", label: "Ingénierie structurale" },
+  { code: "autre", label: "Autre" },
+];
+
+const DEFAULT_CONSULTATION_TYPES = [
+  { code: "rfq", label: "Demande de cotation (RFQ)" },
+  { code: "rfp", label: "Demande de proposition (RFP)" },
+  { code: "appel_offre_national", label: "Appel d'offres national" },
+  { code: "appel_offre_international", label: "Appel d'offres international" },
+  { code: "gre_a_gre", label: "Gré à gré" },
+  { code: "accord_cadre", label: "Accord cadre" },
 ];
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -36,10 +46,6 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   attribue:            { label: "Attribué ✓",          color: "bg-green-100 text-green-700" },
   perdu:               { label: "Perdu",               color: "bg-red-100 text-red-700" },
   annule:              { label: "Annulé",              color: "bg-gray-100 text-gray-600" },
-};
-
-const TYPE_MAP: Record<string, string> = {
-  rfq: "RFQ", rfp: "RFP", appel_offre: "Appel d'offres", gre_a_gre: "Gré à gré",
 };
 
 async function apiFetch(path: string, opts?: RequestInit) {
@@ -57,8 +63,11 @@ interface Consultation {
   notes?: string; lostReason?: string;
 }
 
+interface Partner { id: number; name: string; companyName?: string; }
+interface PType { id: number; code: string; label: string; isActive: boolean; }
+
 const EMPTY: Partial<Consultation> = {
-  title: "", type: "rfq", status: "recu", currency: "MRU",
+  title: "", type: "", status: "recu", currency: "MRU",
 };
 
 export default function Consultations() {
@@ -72,12 +81,34 @@ export default function Consultations() {
   const [detailItem, setDetailItem] = useState<Consultation | null>(null);
   const [pending, setPending] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  // ── Data fetching ───────────────────────────────────────────────────────────
+  const { data } = useQuery({
     queryKey: ["consultations"],
     queryFn: () => apiFetch(`${BASE}/api/consultations`),
   });
+  const { data: partnersData } = useQuery({
+    queryKey: ["partners-all"],
+    queryFn: () => apiFetch(`${BASE}/api/partners?type=customer&limit=200`),
+  });
+  const { data: serviceTypesData } = useQuery<PType[]>({
+    queryKey: ["project-service-types"],
+    queryFn: () => apiFetch(`${BASE}/api/project-service-types`),
+  });
+  const { data: consultationTypesData } = useQuery<PType[]>({
+    queryKey: ["project-consultation-types"],
+    queryFn: () => apiFetch(`${BASE}/api/project-consultation-types`),
+  });
 
   const consultations: Consultation[] = data?.data ?? [];
+  const partners: Partner[] = partnersData?.data ?? [];
+
+  // Utiliser les types configurés ou les valeurs par défaut
+  const serviceTypes = (serviceTypesData && serviceTypesData.length > 0)
+    ? serviceTypesData.filter(t => t.isActive).map(t => ({ code: t.code, label: t.label }))
+    : DEFAULT_SERVICE_TYPES;
+  const consultationTypes = (consultationTypesData && consultationTypesData.length > 0)
+    ? consultationTypesData.filter(t => t.isActive).map(t => ({ code: t.code, label: t.label }))
+    : DEFAULT_CONSULTATION_TYPES;
 
   const filtered = consultations.filter(c => {
     const q = search.toLowerCase();
@@ -97,6 +128,12 @@ export default function Consultations() {
 
   function toggleService(v: string) {
     setSelectedServices(s => s.includes(v) ? s.filter(x => x !== v) : [...s, v]);
+  }
+
+  function openCreate() {
+    setForm({ ...EMPTY, type: consultationTypes[0]?.code ?? "rfq" });
+    setSelectedServices([]);
+    setCreateOpen(true);
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -145,6 +182,20 @@ export default function Consultations() {
     }
   }
 
+  function getPartnerName(partnerId?: number): string {
+    if (!partnerId) return "—";
+    const p = partners.find(x => x.id === partnerId);
+    return p ? (p.companyName || p.name) : `#${partnerId}`;
+  }
+
+  function getServiceLabel(code: string): string {
+    return serviceTypes.find(x => x.code === code)?.label ?? code;
+  }
+
+  function getTypeLabel(code: string): string {
+    return consultationTypes.find(x => x.code === code)?.label ?? code;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -152,7 +203,7 @@ export default function Consultations() {
           <h1 className="text-2xl font-bold">Consultations / RFQ</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Suivi des demandes de consultation entrantes</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
+        <Button onClick={openCreate} className="gap-2">
           <Plus className="w-4 h-4" /> Nouvelle consultation
         </Button>
       </div>
@@ -213,9 +264,7 @@ export default function Consultations() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center h-24">Chargement...</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
+              {filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">Aucune consultation</TableCell></TableRow>
               ) : filtered.map(c => {
                 const services: string[] = c.serviceTypes ? JSON.parse(c.serviceTypes) : [];
@@ -225,15 +274,18 @@ export default function Consultations() {
                     <TableCell className="font-mono text-sm">{c.reference}</TableCell>
                     <TableCell>
                       <p className="font-medium">{c.title}</p>
-                      {c.clientRef && <p className="text-xs text-muted-foreground">Réf client: {c.clientRef}</p>}
+                      {c.partnerId && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Building2 className="w-3 h-3" />{getPartnerName(c.partnerId)}
+                        </p>
+                      )}
+                      {!c.partnerId && c.clientRef && <p className="text-xs text-muted-foreground">Réf: {c.clientRef}</p>}
                     </TableCell>
-                    <TableCell><Badge variant="outline">{TYPE_MAP[c.type] ?? c.type}</Badge></TableCell>
+                    <TableCell><Badge variant="outline" className="text-xs">{getTypeLabel(c.type)}</Badge></TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {services.slice(0, 2).map(s => (
-                          <Badge key={s} variant="secondary" className="text-xs">
-                            {SERVICE_TYPES.find(x => x.value === s)?.label ?? s}
-                          </Badge>
+                          <Badge key={s} variant="secondary" className="text-xs">{getServiceLabel(s)}</Badge>
                         ))}
                         {services.length > 2 && <Badge variant="secondary" className="text-xs">+{services.length - 2}</Badge>}
                       </div>
@@ -276,13 +328,41 @@ export default function Consultations() {
                 <Label>Titre / Objet *</Label>
                 <Input value={form.title ?? ""} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
               </div>
-              <div>
-                <Label>Type</Label>
-                <Select value={form.type ?? "rfq"} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+
+              {/* Client depuis la base Facturation */}
+              <div className="col-span-2">
+                <Label>Client (depuis Facturation)</Label>
+                <Select
+                  value={form.partnerId ? String(form.partnerId) : "none"}
+                  onValueChange={v => setForm(f => ({ ...f, partnerId: v === "none" ? undefined : Number(v) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un client existant..." />
+                  </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(TYPE_MAP).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    <SelectItem value="none">— Aucun client lié —</SelectItem>
+                    {partners.map(p => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.companyName || p.name}
+                        {p.companyName && p.name !== p.companyName && ` (${p.name})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {partners.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Aucun client trouvé. Créez-en un dans le module Facturation → Clients.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label>Type de consultation</Label>
+                <Select value={form.type ?? ""} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                  <SelectContent>
+                    {consultationTypes.map(t => (
+                      <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -297,20 +377,28 @@ export default function Consultations() {
                   onChange={e => setForm(f => ({ ...f, deadlineAt: e.target.value }))} />
               </div>
               <div>
-                <Label>Montant estimé</Label>
+                <Label>Montant estimé (MRU)</Label>
                 <Input type="number" value={form.estimatedAmount ?? ""} placeholder="0"
                   onChange={e => setForm(f => ({ ...f, estimatedAmount: e.target.value }))} />
               </div>
             </div>
 
+            {/* Types de prestations dynamiques */}
             <div>
-              <Label className="mb-2 block">Types de prestations</Label>
+              <Label className="mb-2 block">
+                Types de prestations
+                {serviceTypes === DEFAULT_SERVICE_TYPES && (
+                  <span className="ml-2 text-xs text-muted-foreground font-normal">
+                    (valeurs par défaut — configurez dans Paramètres)
+                  </span>
+                )}
+              </Label>
               <div className="grid grid-cols-2 gap-2">
-                {SERVICE_TYPES.map(s => (
-                  <label key={s.value} className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer text-sm transition-colors
-                    ${selectedServices.includes(s.value) ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}>
-                    <input type="checkbox" className="rounded" checked={selectedServices.includes(s.value)}
-                      onChange={() => toggleService(s.value)} />
+                {serviceTypes.map(s => (
+                  <label key={s.code} className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer text-sm transition-colors
+                    ${selectedServices.includes(s.code) ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}>
+                    <input type="checkbox" className="rounded" checked={selectedServices.includes(s.code)}
+                      onChange={() => toggleService(s.code)} />
                     {s.label}
                   </label>
                 ))}
@@ -344,11 +432,11 @@ export default function Consultations() {
               <p className="text-sm font-mono text-muted-foreground">{detailItem.reference}</p>
             </SheetHeader>
             <div className="mt-6 space-y-5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${STATUS_MAP[detailItem.status]?.color}`}>
                   {STATUS_MAP[detailItem.status]?.label ?? detailItem.status}
                 </span>
-                <Badge variant="outline">{TYPE_MAP[detailItem.type] ?? detailItem.type}</Badge>
+                <Badge variant="outline">{getTypeLabel(detailItem.type)}</Badge>
               </div>
 
               {/* Changer statut */}
@@ -368,6 +456,14 @@ export default function Consultations() {
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
+                {detailItem.partnerId && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Client</p>
+                    <p className="font-medium flex items-center gap-1">
+                      <Building2 className="w-3.5 h-3.5" />{getPartnerName(detailItem.partnerId)}
+                    </p>
+                  </div>
+                )}
                 {detailItem.clientRef && (
                   <div><p className="text-muted-foreground">Réf. client</p><p className="font-medium">{detailItem.clientRef}</p></div>
                 )}
@@ -376,7 +472,7 @@ export default function Consultations() {
                     <p className="font-medium">{format(new Date(detailItem.deadlineAt), "dd MMMM yyyy", { locale: fr })}</p></div>
                 )}
                 {detailItem.estimatedAmount && (
-                  <div><p className="text-muted-foreground">Montant estimé</p>
+                  <div className="col-span-2"><p className="text-muted-foreground">Montant estimé</p>
                     <p className="font-medium text-lg">{Number(detailItem.estimatedAmount).toLocaleString("fr-FR")} {detailItem.currency}</p></div>
                 )}
                 <div>
@@ -387,18 +483,16 @@ export default function Consultations() {
 
               {detailItem.serviceTypes && (() => {
                 const services = JSON.parse(detailItem.serviceTypes);
-                return (
+                return services.length > 0 ? (
                   <div>
                     <p className="text-muted-foreground text-sm mb-2">Prestations demandées</p>
                     <div className="flex flex-wrap gap-2">
                       {services.map((s: string) => (
-                        <Badge key={s} variant="secondary">
-                          {SERVICE_TYPES.find(x => x.value === s)?.label ?? s}
-                        </Badge>
+                        <Badge key={s} variant="secondary">{getServiceLabel(s)}</Badge>
                       ))}
                     </div>
                   </div>
-                );
+                ) : null;
               })()}
 
               {detailItem.description && (
