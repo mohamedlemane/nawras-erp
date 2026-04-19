@@ -7,8 +7,7 @@ const router: IRouter = Router();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function cid(req: Request): number | null {
-  if (req.user!.isSuperAdmin && !req.user!.company) return null;
-  return req.user!.company!.companyId;
+  return (req as any).companyId ?? null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

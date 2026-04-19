@@ -13,11 +13,16 @@ function genRef(prefix: string): string {
   return `${prefix}-${y}-${rand}`;
 }
 
+/** Retourne l'ID de société injecté par requirePermission, ou null pour super admin sans société */
+function getCid(req: Request): number | null {
+  return (req as any).companyId ?? null;
+}
+
 // ── CONSULTATIONS ─────────────────────────────────────────────────────────────
 
 router.get("/consultations", requirePermission("view_billing"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.json({ data: [], total: 0 }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.json({ data: [], total: 0 }); return; }
   const rows = await db
     .select()
     .from(consultationsTable)
@@ -27,8 +32,8 @@ router.get("/consultations", requirePermission("view_billing"), async (req: Requ
 });
 
 router.get("/consultations/:id", requirePermission("view_billing"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.status(404).json({ error: "Non trouvé" }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.status(404).json({ error: "Non trouvé" }); return; }
   const [row] = await db.select().from(consultationsTable)
     .where(and(eq(consultationsTable.id, Number(req.params.id)), eq(consultationsTable.companyId, cid)));
   if (!row) { res.status(404).json({ error: "Consultation introuvable" }); return; }
@@ -36,8 +41,8 @@ router.get("/consultations/:id", requirePermission("view_billing"), async (req: 
 });
 
 router.post("/consultations", requirePermission("create_invoice"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
   const { title, partnerId, clientRef, type, serviceTypes, description, receivedAt, deadlineAt, estimatedAmount, currency, notes } = req.body;
   if (!title) { res.status(400).json({ error: "Titre requis" }); return; }
 
@@ -61,8 +66,8 @@ router.post("/consultations", requirePermission("create_invoice"), async (req: R
 });
 
 router.patch("/consultations/:id", requirePermission("create_invoice"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
   const id = Number(req.params.id);
   const [exists] = await db.select({ id: consultationsTable.id }).from(consultationsTable)
     .where(and(eq(consultationsTable.id, id), eq(consultationsTable.companyId, cid)));
@@ -77,7 +82,7 @@ router.patch("/consultations/:id", requirePermission("create_invoice"), async (r
       if (k === "serviceTypes" && Array.isArray(v)) v = JSON.stringify(v);
       if (k === "partnerId") v = v ? Number(v) : null;
       if ((k === "receivedAt" || k === "deadlineAt" || k === "awardedAt") && v) v = new Date(v);
-      const dbKey = k.replace(/([A-Z])/g, "_$1").toLowerCase() as keyof typeof consultationsTable.$inferInsert;
+      const dbKey = k.replace(/([A-Z])/g, "_$1").toLowerCase();
       (updates as any)[dbKey] = v;
     }
   }
@@ -88,8 +93,8 @@ router.patch("/consultations/:id", requirePermission("create_invoice"), async (r
 });
 
 router.delete("/consultations/:id", requirePermission("create_invoice"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
   const id = Number(req.params.id);
   const [exists] = await db.select({ id: consultationsTable.id }).from(consultationsTable)
     .where(and(eq(consultationsTable.id, id), eq(consultationsTable.companyId, cid)));
@@ -101,8 +106,8 @@ router.delete("/consultations/:id", requirePermission("create_invoice"), async (
 // ── PROJETS ───────────────────────────────────────────────────────────────────
 
 router.get("/projects", requirePermission("view_billing"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.json({ data: [], total: 0 }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.json({ data: [], total: 0 }); return; }
   const rows = await db
     .select()
     .from(projectsTable)
@@ -112,8 +117,8 @@ router.get("/projects", requirePermission("view_billing"), async (req: Request, 
 });
 
 router.get("/projects/:id", requirePermission("view_billing"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.status(404).json({ error: "Non trouvé" }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.status(404).json({ error: "Non trouvé" }); return; }
   const id = Number(req.params.id);
   const [project] = await db.select().from(projectsTable)
     .where(and(eq(projectsTable.id, id), eq(projectsTable.companyId, cid)));
@@ -130,8 +135,8 @@ router.get("/projects/:id", requirePermission("view_billing"), async (req: Reque
 });
 
 router.post("/projects", requirePermission("create_invoice"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
   const {
     title, consultationId, partnerId, serviceTypes, startDate, endDatePlanned,
     contractAmount, currency,
@@ -192,8 +197,8 @@ router.post("/projects", requirePermission("create_invoice"), async (req: Reques
 });
 
 router.patch("/projects/:id", requirePermission("create_invoice"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
   const id = Number(req.params.id);
   const [exists] = await db.select({ id: projectsTable.id }).from(projectsTable)
     .where(and(eq(projectsTable.id, id), eq(projectsTable.companyId, cid)));
@@ -242,8 +247,8 @@ router.patch("/projects/:id", requirePermission("create_invoice"), async (req: R
 });
 
 router.delete("/projects/:id", requirePermission("create_invoice"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
   const id = Number(req.params.id);
   const [exists] = await db.select({ id: projectsTable.id }).from(projectsTable)
     .where(and(eq(projectsTable.id, id), eq(projectsTable.companyId, cid)));
@@ -255,8 +260,8 @@ router.delete("/projects/:id", requirePermission("create_invoice"), async (req: 
 // ── SITES ─────────────────────────────────────────────────────────────────────
 
 router.get("/projects/:id/sites", requirePermission("view_billing"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.json([]); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.json([]); return; }
   const id = Number(req.params.id);
   const [p] = await db.select({ id: projectsTable.id }).from(projectsTable)
     .where(and(eq(projectsTable.id, id), eq(projectsTable.companyId, cid)));
@@ -266,8 +271,8 @@ router.get("/projects/:id/sites", requirePermission("view_billing"), async (req:
 });
 
 router.post("/projects/:id/sites", requirePermission("create_invoice"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
   const projectId = Number(req.params.id);
   const [p] = await db.select({ id: projectsTable.id }).from(projectsTable)
     .where(and(eq(projectsTable.id, projectId), eq(projectsTable.companyId, cid)));
@@ -318,8 +323,8 @@ router.delete("/projects/:id/sites/:siteId", requirePermission("create_invoice")
 // ── RAPPORTS ──────────────────────────────────────────────────────────────────
 
 router.get("/projects/:id/reports", requirePermission("view_billing"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.json([]); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.json([]); return; }
   const id = Number(req.params.id);
   const [p] = await db.select({ id: projectsTable.id }).from(projectsTable)
     .where(and(eq(projectsTable.id, id), eq(projectsTable.companyId, cid)));
@@ -331,8 +336,8 @@ router.get("/projects/:id/reports", requirePermission("view_billing"), async (re
 });
 
 router.post("/projects/:id/reports", requirePermission("create_invoice"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
-  const cid = req.user!.company!.companyId;
+  const cid = getCid(req);
+  if (!cid) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
   const projectId = Number(req.params.id);
   const [p] = await db.select({ id: projectsTable.id }).from(projectsTable)
     .where(and(eq(projectsTable.id, projectId), eq(projectsTable.companyId, cid)));
@@ -394,11 +399,11 @@ router.delete("/projects/:id/reports/:reportId", requirePermission("create_invoi
 // ── STATISTIQUES ──────────────────────────────────────────────────────────────
 
 router.get("/projects-stats", requirePermission("view_billing"), async (req: Request, res: Response): Promise<void> => {
-  if (req.user!.isSuperAdmin && !req.user!.company) {
+  const cid = getCid(req);
+  if (!cid) {
     res.json({ consultations: 0, projects: 0, activeProjects: 0, tauxAttribution: 0 });
     return;
   }
-  const cid = req.user!.company!.companyId;
   const [cStats] = await db.select({
     total: sql<number>`count(*)`,
     attribuees: sql<number>`count(*) filter (where status = 'attribue')`,
