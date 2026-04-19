@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Search, TrendingDown, CalendarDays, Receipt, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, TrendingDown, CalendarDays, Receipt, Filter, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -21,10 +21,15 @@ const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 type ExpenseType = {
   id: number; name: string; code: string; color: string | null; isActive: boolean;
 };
+type Supplier = {
+  id: number; name: string; companyName: string | null; phone: string | null;
+};
 type Expense = {
   id: number; label: string; amount: string; currency: string; expenseDate: string;
   expenseTypeId: number | null; typeName: string | null; typeColor: string | null;
-  paymentMethod: string | null; status: string; supplier: string | null;
+  paymentMethod: string | null; status: string;
+  supplierId: number | null; supplier: string | null;
+  supplierName: string | null; supplierCompany: string | null;
   invoiceRef: string | null; notes: string | null; reference: string | null;
 };
 
@@ -52,7 +57,8 @@ const EMPTY_FORM = {
   label: "", amount: "", currency: "MRU", expenseTypeId: null as number | null,
   expenseDate: new Date().toISOString().substring(0, 10),
   paymentMethod: "cash", status: "paid",
-  supplier: "", invoiceRef: "", notes: "", reference: "",
+  supplierId: null as number | null,
+  invoiceRef: "", notes: "", reference: "",
 };
 
 export default function Expenses() {
@@ -69,6 +75,11 @@ export default function Expenses() {
   const { data: typesData } = useQuery<ExpenseType[]>({
     queryKey: ["expense-types"],
     queryFn: () => fetch(`${BASE}/api/expense-types`, { credentials: "include" }).then(r => r.json()),
+  });
+
+  const { data: suppliersData } = useQuery<{ data: Supplier[] }>({
+    queryKey: ["suppliers-list"],
+    queryFn: () => fetch(`${BASE}/api/partners?type=supplier&limit=200`, { credentials: "include" }).then(r => r.json()),
   });
 
   const { data, isLoading } = useQuery<{ data: Expense[]; total: number }>({
@@ -95,7 +106,7 @@ export default function Expenses() {
       const q = search.toLowerCase();
       list = list.filter(e =>
         e.label.toLowerCase().includes(q) ||
-        (e.supplier ?? "").toLowerCase().includes(q) ||
+        (e.supplierName ?? e.supplier ?? "").toLowerCase().includes(q) ||
         (e.reference ?? "").toLowerCase().includes(q)
       );
     }
@@ -162,7 +173,7 @@ export default function Expenses() {
       expenseDate: expense.expenseDate.substring(0, 10),
       paymentMethod: expense.paymentMethod ?? "cash",
       status: expense.status,
-      supplier: expense.supplier ?? "",
+      supplierId: expense.supplierId,
       invoiceRef: expense.invoiceRef ?? "",
       notes: expense.notes ?? "",
       reference: expense.reference ?? "",
@@ -177,6 +188,19 @@ export default function Expenses() {
   }
 
   const typeOptions = (typesData ?? []).filter(t => t.isActive).map(t => ({ value: t.id, label: t.name }));
+
+  const supplierOptions = (suppliersData?.data ?? []).map(s => ({
+    value: s.id,
+    label: s.companyName ? `${s.name} — ${s.companyName}` : s.name,
+    sublabel: s.phone ?? undefined,
+  }));
+
+  const getSupplierDisplay = (expense: Expense) =>
+    expense.supplierName
+      ? expense.supplierCompany
+        ? `${expense.supplierName} — ${expense.supplierCompany}`
+        : expense.supplierName
+      : expense.supplier || "—";
 
   return (
     <div className="space-y-6">
@@ -294,7 +318,16 @@ export default function Expenses() {
                       </span>
                     ) : <span className="text-muted-foreground text-sm">—</span>}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{expense.supplier || "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {expense.supplierId ? (
+                      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                        <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+                        {getSupplierDisplay(expense)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm">
                     {PAYMENT_METHODS.find(m => m.value === expense.paymentMethod)?.label ?? expense.paymentMethod}
                   </TableCell>
@@ -362,6 +395,32 @@ export default function Expenses() {
               />
             </div>
 
+            <div>
+              <Label className="flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5" /> Fournisseur
+              </Label>
+              <ReactSelect
+                unstyled classNames={rsClassNames} styles={rsPortalStyles}
+                isClearable placeholder="Sélectionner un fournisseur..."
+                noOptionsMessage={() => supplierOptions.length === 0 ? "Aucun fournisseur enregistré dans la facturation" : "Aucun résultat"}
+                options={supplierOptions}
+                value={form.supplierId ? supplierOptions.find(o => o.value === form.supplierId) ?? null : null}
+                onChange={opt => setForm(f => ({ ...f, supplierId: opt ? opt.value : null }))}
+                formatOptionLabel={opt => (
+                  <div>
+                    <div className="font-medium text-sm">{opt.label}</div>
+                    {opt.sublabel && <div className="text-xs text-muted-foreground">{opt.sublabel}</div>}
+                  </div>
+                )}
+              />
+              {supplierOptions.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ajoutez des fournisseurs dans{" "}
+                  <a href={`${BASE}/billing/partners`} className="underline text-primary">Facturation → Partenaires</a>
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Mode de paiement</Label>
@@ -385,18 +444,13 @@ export default function Expenses() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Fournisseur</Label>
-                <Input value={form.supplier} onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))} placeholder="Ex: SOMELEC, Mauritel..." />
-              </div>
-              <div>
                 <Label>Réf. facture</Label>
                 <Input value={form.invoiceRef} onChange={e => setForm(f => ({ ...f, invoiceRef: e.target.value }))} placeholder="N° de la facture" />
               </div>
-            </div>
-
-            <div>
-              <Label>Référence interne</Label>
-              <Input value={form.reference} onChange={e => setForm(f => ({ ...f, reference: e.target.value }))} placeholder="Votre code de référence" />
+              <div>
+                <Label>Référence interne</Label>
+                <Input value={form.reference} onChange={e => setForm(f => ({ ...f, reference: e.target.value }))} placeholder="Votre code de référence" />
+              </div>
             </div>
 
             <div>

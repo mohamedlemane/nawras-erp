@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { db, expenseTypesTable, expensesTable } from "@workspace/db";
+import { db, expenseTypesTable, expensesTable, partnersTable } from "@workspace/db";
 import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
 import { createAuditLog } from "../lib/audit";
 
@@ -22,7 +22,6 @@ const DEFAULT_TYPES = [
 
 // ── EXPENSE TYPES ─────────────────────────────────────────────────────────────
 
-// GET /api/expense-types
 router.get("/expense-types", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
@@ -34,7 +33,6 @@ router.get("/expense-types", requireAuth, async (req: Request, res: Response): P
     .where(eq(expenseTypesTable.companyId, info.companyId))
     .orderBy(expenseTypesTable.name);
 
-  // Auto-seed defaults if none exist
   if (types.length === 0) {
     const inserted = await db
       .insert(expenseTypesTable)
@@ -46,7 +44,6 @@ router.get("/expense-types", requireAuth, async (req: Request, res: Response): P
   res.json(types.map(t => ({ ...t, createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString() })));
 });
 
-// POST /api/expense-types
 router.post("/expense-types", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
@@ -64,7 +61,6 @@ router.post("/expense-types", requireAuth, async (req: Request, res: Response): 
   res.status(201).json({ ...type!, createdAt: type!.createdAt.toISOString(), updatedAt: type!.updatedAt.toISOString() });
 });
 
-// PATCH /api/expense-types/:id
 router.patch("/expense-types/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
@@ -84,7 +80,6 @@ router.patch("/expense-types/:id", requireAuth, async (req: Request, res: Respon
   res.json({ ...type, createdAt: type.createdAt.toISOString(), updatedAt: type.updatedAt.toISOString() });
 });
 
-// DELETE /api/expense-types/:id
 router.delete("/expense-types/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
@@ -98,7 +93,9 @@ router.delete("/expense-types/:id", requireAuth, async (req: Request, res: Respo
 
 // ── EXPENSES ──────────────────────────────────────────────────────────────────
 
-// GET /api/expenses
+// Alias for partner join (avoid name conflict with expensesTable)
+const supplierPartner = partnersTable;
+
 router.get("/expenses", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
@@ -130,7 +127,10 @@ router.get("/expenses", requireAuth, async (req: Request, res: Response): Promis
         expenseDate: expensesTable.expenseDate,
         paymentMethod: expensesTable.paymentMethod,
         status: expensesTable.status,
+        supplierId: expensesTable.supplierId,
         supplier: expensesTable.supplier,
+        supplierName: supplierPartner.name,
+        supplierCompany: supplierPartner.companyName,
         invoiceRef: expensesTable.invoiceRef,
         projectId: expensesTable.projectId,
         notes: expensesTable.notes,
@@ -142,6 +142,7 @@ router.get("/expenses", requireAuth, async (req: Request, res: Response): Promis
       })
       .from(expensesTable)
       .leftJoin(expenseTypesTable, eq(expensesTable.expenseTypeId, expenseTypesTable.id))
+      .leftJoin(supplierPartner, eq(expensesTable.supplierId, supplierPartner.id))
       .where(and(...conditions))
       .orderBy(desc(expensesTable.expenseDate))
       .limit(limit)
@@ -162,13 +163,12 @@ router.get("/expenses", requireAuth, async (req: Request, res: Response): Promis
   });
 });
 
-// POST /api/expenses
 router.post("/expenses", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
   if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
-  const { label, amount, expenseTypeId, expenseDate, paymentMethod, status, supplier, invoiceRef, projectId, notes, currency, reference } = req.body;
+  const { label, amount, expenseTypeId, expenseDate, paymentMethod, status, supplierId, supplier, invoiceRef, projectId, notes, currency, reference } = req.body;
   if (!label) { res.status(400).json({ error: "label est requis" }); return; }
   if (!amount || isNaN(parseFloat(amount))) { res.status(400).json({ error: "amount invalide" }); return; }
 
@@ -182,6 +182,7 @@ router.post("/expenses", requireAuth, async (req: Request, res: Response): Promi
       expenseDate: expenseDate ? new Date(expenseDate) : new Date(),
       paymentMethod: paymentMethod ?? "cash",
       status: status ?? "paid",
+      supplierId: supplierId ? parseInt(supplierId, 10) : null,
       supplier: supplier ?? null,
       invoiceRef: invoiceRef ?? null,
       projectId: projectId ?? null,
@@ -196,14 +197,13 @@ router.post("/expenses", requireAuth, async (req: Request, res: Response): Promi
   res.status(201).json({ ...expense!, expenseDate: expense!.expenseDate.toISOString(), createdAt: expense!.createdAt.toISOString(), updatedAt: expense!.updatedAt.toISOString() });
 });
 
-// PATCH /api/expenses/:id
 router.patch("/expenses/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
   if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  const { label, amount, expenseTypeId, expenseDate, paymentMethod, status, supplier, invoiceRef, projectId, notes, currency, reference } = req.body;
+  const { label, amount, expenseTypeId, expenseDate, paymentMethod, status, supplierId, supplier, invoiceRef, projectId, notes, currency, reference } = req.body;
 
   const [expense] = await db
     .update(expensesTable)
@@ -214,7 +214,8 @@ router.patch("/expenses/:id", requireAuth, async (req: Request, res: Response): 
       expenseDate: expenseDate ? new Date(expenseDate) : undefined,
       paymentMethod,
       status,
-      supplier,
+      supplierId: supplierId !== undefined ? (supplierId ? parseInt(supplierId, 10) : null) : undefined,
+      supplier: supplier ?? null,
       invoiceRef,
       projectId: projectId ?? null,
       notes,
@@ -230,7 +231,6 @@ router.patch("/expenses/:id", requireAuth, async (req: Request, res: Response): 
   res.json({ ...expense, expenseDate: expense.expenseDate.toISOString(), createdAt: expense.createdAt.toISOString(), updatedAt: expense.updatedAt.toISOString() });
 });
 
-// DELETE /api/expenses/:id
 router.delete("/expenses/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
@@ -242,7 +242,6 @@ router.delete("/expenses/:id", requireAuth, async (req: Request, res: Response):
   res.status(204).send();
 });
 
-// GET /api/expenses/summary — totaux par type pour le mois en cours
 router.get("/expenses/summary", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);

@@ -2,6 +2,7 @@ import { boolean, decimal, integer, pgTable, serial, text, timestamp, varchar } 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { companiesTable } from "./companies";
+import { partnersTable } from "./billing";
 
 // ── Types de dépenses (paramétrable par entreprise) ─────────────────────────
 export const expenseTypesTable = pgTable("expense_types", {
@@ -29,6 +30,7 @@ export const expensesTable = pgTable("expenses", {
   expenseDate: timestamp("expense_date", { withTimezone: true }).notNull().defaultNow(),
   paymentMethod: varchar("payment_method", { length: 30 }).default("cash"),
   status: varchar("status", { length: 20 }).notNull().default("paid"),
+  supplierId: integer("supplier_id").references(() => partnersTable.id, { onDelete: "set null" }),
   supplier: text("supplier"),
   invoiceRef: varchar("invoice_ref", { length: 100 }),
   projectId: integer("project_id"),
