@@ -1,0 +1,25 @@
+uploads = []
+
+[[generated]]
+id = "lIPoT2RiXM6LT0mbfnmxQ"
+uri = "file://attached_assets/generated_images/cta-one-logo-v1.png"
+type = "image"
+title = "cta-one logo v1"
+
+[[generated]]
+id = "Jn6-tsoRN-2x1xatym-KQ"
+uri = "file://attached_assets/generated_images/cta-one-logo-v2.png"
+type = "image"
+title = "cta-one logo v2"
+
+[[outputs]]
+id = "CjcsIqZhSqy7JGJzU9pqD"
+uri = "file://attached_assets/generated_images/cta-one-logo-v1.png"
+type = "image"
+title = "Logo CTA-ONE — Version Bleue (hexagone/tech)"
+
+[[outputs]]
+id = "VTycwWs-iusZBZzxSOxEc"
+uri = "file://attached_assets/generated_images/cta-one-logo-v2.png"
+type = "image"
+title = "Logo CTA-ONE — Version Orange (arc/shield)"
