@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ReactSelect from "react-select";
+import { rsStyles } from "@/lib/rs-styles";
 import { useListEmployees, useListDepartments, useListPositions, createEmployee, updateEmployee } from "@workspace/api-client-react";
 import type { CreateEmployeeBody, Employee } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -164,23 +166,27 @@ export default function EmployeesList() {
             </div>
             <div>
               <Label>Département</Label>
-              <Select value={form.departmentId?.toString() || "none"} onValueChange={v => setForm(f => ({ ...f, departmentId: v === "none" ? null : Number(v) }))}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucun</SelectItem>
-                  {departments?.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <ReactSelect
+                styles={rsStyles}
+                isClearable
+                placeholder="Rechercher un département..."
+                noOptionsMessage={() => "Aucun département trouvé"}
+                options={departments?.map(d => ({ value: d.id, label: d.name })) ?? []}
+                value={form.departmentId ? { value: form.departmentId, label: departments?.find(d => d.id === form.departmentId)?.name ?? "" } : null}
+                onChange={opt => setForm(f => ({ ...f, departmentId: opt ? opt.value : null }))}
+              />
             </div>
             <div>
               <Label>Poste</Label>
-              <Select value={form.positionId?.toString() || "none"} onValueChange={v => setForm(f => ({ ...f, positionId: v === "none" ? null : Number(v) }))}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucun</SelectItem>
-                  {positions?.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <ReactSelect
+                styles={rsStyles}
+                isClearable
+                placeholder="Rechercher un poste..."
+                noOptionsMessage={() => "Aucun poste trouvé"}
+                options={positions?.map(p => ({ value: p.id, label: p.name })) ?? []}
+                value={form.positionId ? { value: form.positionId, label: positions?.find(p => p.id === form.positionId)?.name ?? "" } : null}
+                onChange={opt => setForm(f => ({ ...f, positionId: opt ? opt.value : null }))}
+              />
             </div>
             <div><Label>Adresse</Label><Input value={form.address ?? ""} onChange={e => setForm(f => ({ ...f, address: e.target.value || null }))} /></div>
             <div><Label>Contact d'urgence</Label><Input value={form.emergencyContact ?? ""} onChange={e => setForm(f => ({ ...f, emergencyContact: e.target.value || null }))} /></div>

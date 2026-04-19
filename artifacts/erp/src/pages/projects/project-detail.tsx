@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
+import { AttachmentsPanel } from "@/components/projects/AttachmentsPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -361,6 +362,9 @@ export default function ProjectDetail() {
               <CardContent><p className="text-sm whitespace-pre-wrap text-muted-foreground">{project.notes}</p></CardContent>
             </Card>
           )}
+          <div className="col-span-1 md:col-span-2">
+            <AttachmentsPanel entityType="project" entityId={project.id} />
+          </div>
         </div>
       )}
 
@@ -493,6 +497,9 @@ export default function ProjectDetail() {
                             {v.label}
                           </button>
                         ))}
+                      </div>
+                      <div className="mt-4 pt-3 border-t">
+                        <AttachmentsPanel entityType="report" entityId={r.id} />
                       </div>
                     </CardContent>
                   </Card>

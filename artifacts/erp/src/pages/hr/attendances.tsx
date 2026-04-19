@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ReactSelect from "react-select";
+import { rsStyles } from "@/lib/rs-styles";
 import { useListAttendances, useListEmployees, createAttendance, updateAttendance } from "@workspace/api-client-react";
 import type { CreateAttendanceBody, CreateAttendanceBodyStatus, Attendance } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -125,10 +127,14 @@ export default function AttendancesList() {
             {!editItem && (
               <div>
                 <Label>Employé *</Label>
-                <Select value={form.employeeId?.toString() || ""} onValueChange={v => setForm(f => ({ ...f, employeeId: Number(v) }))}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner un employé" /></SelectTrigger>
-                  <SelectContent>{employeesData?.data?.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.firstName} {e.lastName}</SelectItem>)}</SelectContent>
-                </Select>
+                <ReactSelect
+                  styles={rsStyles}
+                  placeholder="Rechercher un employé..."
+                  noOptionsMessage={() => "Aucun employé trouvé"}
+                  options={employeesData?.data?.map(e => ({ value: e.id, label: `${e.firstName} ${e.lastName}` })) ?? []}
+                  value={form.employeeId ? { value: form.employeeId, label: employeesData?.data?.find(e => e.id === form.employeeId) ? `${employeesData.data.find(e => e.id === form.employeeId)!.firstName} ${employeesData.data.find(e => e.id === form.employeeId)!.lastName}` : "" } : null}
+                  onChange={opt => setForm(f => ({ ...f, employeeId: opt ? opt.value : 0 }))}
+                />
               </div>
             )}
             <div><Label>Date *</Label><Input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required /></div>

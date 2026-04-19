@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ReactSelect from "react-select";
+import { rsStyles } from "@/lib/rs-styles";
 import { useListInvoices, useListPartners, useListProducts, createInvoice } from "@workspace/api-client-react";
 import type { CreateInvoiceBody, DocumentItemInput } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -144,13 +146,15 @@ export default function InvoicesList() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Client</Label>
-                <Select value={form.partnerId?.toString() || "none"} onValueChange={v => setForm(f => ({ ...f, partnerId: v === "none" ? null : Number(v) }))}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sans client</SelectItem>
-                    {partnersData?.data?.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ReactSelect
+                  styles={rsStyles}
+                  isClearable
+                  placeholder="Rechercher un client..."
+                  noOptionsMessage={() => "Aucun client trouvé"}
+                  options={partnersData?.data?.map(p => ({ value: p.id, label: p.name })) ?? []}
+                  value={form.partnerId ? { value: form.partnerId, label: partnersData?.data?.find(p => p.id === form.partnerId)?.name ?? "" } : null}
+                  onChange={opt => setForm(f => ({ ...f, partnerId: opt ? opt.value : null }))}
+                />
               </div>
               <div><Label>Objet</Label><Input value={form.subject ?? ""} onChange={e => setForm(f => ({ ...f, subject: e.target.value || null }))} /></div>
             </div>
