@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import ReactSelect from "react-select";
+import { rsStyles } from "@/lib/rs-styles";
 import { useListPayments, useListInvoices, createPayment } from "@workspace/api-client-react";
 import type { CreatePaymentBody, CreatePaymentBodyPaymentMethod } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -82,12 +84,12 @@ export default function PaymentsList() {
     setDialogOpen(true);
   };
 
-  const handleInvoiceChange = (v: string) => {
-    const inv = unpaidInvoices.find((i) => i.id === Number(v));
+  const handleInvoiceChange = (id: number | null) => {
+    const inv = unpaidInvoices.find((i) => i.id === id);
     setAmountError(null);
     setForm((f) => ({
       ...f,
-      invoiceId: Number(v),
+      invoiceId: id ?? 0,
       amount: inv ? inv.amountDue : 0,
     }));
   };
@@ -184,26 +186,17 @@ export default function PaymentsList() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Facture *</Label>
-              <Select
-                value={form.invoiceId ? form.invoiceId.toString() : ""}
-                onValueChange={handleInvoiceChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner une facture" />
-                </SelectTrigger>
-                <SelectContent>
-                  {unpaidInvoices.map((inv) => (
-                    <SelectItem key={inv.id} value={inv.id.toString()}>
-                      {inv.invoiceNumber} — {inv.partnerName || "?"} ({formatCurrency(inv.amountDue)} restant)
-                    </SelectItem>
-                  ))}
-                  {unpaidInvoices.length === 0 && (
-                    <SelectItem value="0" disabled>
-                      Aucune facture impayée
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+              <ReactSelect
+                styles={rsStyles}
+                placeholder="Rechercher une facture impayée..."
+                noOptionsMessage={() => unpaidInvoices.length === 0 ? "Aucune facture impayée" : "Aucun résultat"}
+                options={unpaidInvoices.map(inv => ({
+                  value: inv.id,
+                  label: `${inv.invoiceNumber} — ${inv.partnerName || "?"} (${formatCurrency(inv.amountDue)} restant)`,
+                }))}
+                value={form.invoiceId ? { value: form.invoiceId, label: (() => { const inv = unpaidInvoices.find(i => i.id === form.invoiceId); return inv ? `${inv.invoiceNumber} — ${inv.partnerName || "?"} (${formatCurrency(inv.amountDue)} restant)` : ""; })() } : null}
+                onChange={opt => handleInvoiceChange(opt ? opt.value : null)}
+              />
             </div>
 
             <div>

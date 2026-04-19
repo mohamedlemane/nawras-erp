@@ -164,13 +164,19 @@ export default function ProformasList() {
                   {form.items.map((it, idx) => (
                     <tr key={idx} className="border-t">
                       <td className="px-2 py-1">
-                        <Select value={it.productId?.toString() || "none"} onValueChange={v => setItemProduct(idx, v)}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Choisir" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Libre</SelectItem>
-                            {productsData?.data?.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        <ReactSelect
+                          styles={{ ...rsStyles, control: (b: any, s: any) => ({ ...rsStyles.control(b, s), minHeight: "32px", fontSize: "12px" }), valueContainer: (b: any) => ({ ...b, padding: "0 6px" }), dropdownIndicator: (b: any) => ({ ...b, padding: "2px" }) }}
+                          isClearable
+                          placeholder="Libre..."
+                          noOptionsMessage={() => "Aucun produit"}
+                          options={productsData?.data?.map(p => ({ value: p.id, label: p.name })) ?? []}
+                          value={it.productId ? { value: it.productId, label: productsData?.data?.find(p => p.id === it.productId)?.name ?? "" } : null}
+                          onChange={opt => {
+                            if (!opt) { updateItem(idx, 'productId', null); return; }
+                            const prod = productsData?.data?.find(p => p.id === opt.value);
+                            if (prod) setForm(f => ({ ...f, items: f.items.map((it2, i) => i === idx ? { ...it2, productId: prod.id, description: prod.name, unitPrice: prod.unitPrice, taxRate: prod.taxRate } : it2) }));
+                          }}
+                        />
                       </td>
                       <td className="px-2 py-1"><Input className="h-8 text-xs" value={it.description} onChange={e => updateItem(idx, 'description', e.target.value)} required /></td>
                       <td className="px-2 py-1"><Input className="h-8 text-xs text-right" type="number" min="1" step="1" value={it.quantity} onChange={e => updateItem(idx, 'quantity', Number(e.target.value))} /></td>
