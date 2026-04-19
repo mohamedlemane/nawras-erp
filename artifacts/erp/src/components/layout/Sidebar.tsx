@@ -26,6 +26,7 @@ import {
   ClipboardList,
   TrendingDown,
   Tag,
+  Plug,
 } from "lucide-react";
 import {
   Collapsible,
@@ -98,6 +99,7 @@ const NAV_ITEMS = [
     icon: Settings,
     items: [
       { title: "Mon Entreprise", href: "/settings/company", icon: Building2 },
+      { title: "Intégrations & Webhooks", href: "/settings/integrations", icon: Plug },
     ],
   },
 ];

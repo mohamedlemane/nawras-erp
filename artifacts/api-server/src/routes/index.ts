@@ -15,6 +15,7 @@ import projectSettingsRouter from "./project-settings";
 import storageRouter from "./storage";
 import attachmentsRouter from "./attachments";
 import expensesRouter from "./expenses";
+import webhooksRouter from "./webhooks";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(projectSettingsRouter);
 router.use(storageRouter);
 router.use(attachmentsRouter);
 router.use(expensesRouter);
+router.use(webhooksRouter);
 
 export default router;

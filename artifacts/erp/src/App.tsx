@@ -48,6 +48,7 @@ import ExpenseTypes from "@/pages/expenses/expense-types";
 
 // Settings
 import CompanySettings from "@/pages/settings/company";
+import Integrations from "@/pages/settings/integrations";
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,7 @@ function AppRouter() {
             <Route path="/expenses/types" component={ExpenseTypes} />
 
             <Route path="/settings/company" component={CompanySettings} />
+            <Route path="/settings/integrations" component={Integrations} />
 
             <Route component={NotFound} />
           </Switch>

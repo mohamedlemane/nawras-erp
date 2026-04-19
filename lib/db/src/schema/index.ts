@@ -7,3 +7,4 @@ export * from "./hr";
 export * from "./audit-logs";
 export * from "./projects";
 export * from "./expenses";
+export * from "./webhooks";
