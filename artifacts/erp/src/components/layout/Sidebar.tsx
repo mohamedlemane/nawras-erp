@@ -24,6 +24,8 @@ import {
   Settings,
   FolderKanban,
   ClipboardList,
+  TrendingDown,
+  Tag,
 } from "lucide-react";
 import {
   Collapsible,
@@ -70,6 +72,14 @@ const NAV_ITEMS = [
       { title: "Congés", href: "/hr/leaves", icon: CalendarDays },
       { title: "Présences", href: "/hr/attendances", icon: Clock },
       { title: "Documents", href: "/hr/documents", icon: Files },
+    ],
+  },
+  {
+    title: "Dépenses",
+    icon: TrendingDown,
+    items: [
+      { title: "Toutes les dépenses", href: "/expenses", icon: TrendingDown },
+      { title: "Types de charges", href: "/expenses/types", icon: Tag },
     ],
   },
   {

@@ -6,3 +6,4 @@ export * from "./billing";
 export * from "./hr";
 export * from "./audit-logs";
 export * from "./projects";
+export * from "./expenses";

@@ -42,6 +42,10 @@ import Companies from "@/pages/admin/companies";
 import AuditLogs from "@/pages/admin/audit-logs";
 import Onboarding from "@/pages/onboarding";
 
+// Expenses
+import Expenses from "@/pages/expenses/expenses";
+import ExpenseTypes from "@/pages/expenses/expense-types";
+
 // Settings
 import CompanySettings from "@/pages/settings/company";
 
@@ -89,6 +93,9 @@ function AppRouter() {
             <Route path="/admin/roles" component={Roles} />
             <Route path="/admin/companies" component={Companies} />
             <Route path="/admin/audit-logs" component={AuditLogs} />
+
+            <Route path="/expenses" component={Expenses} />
+            <Route path="/expenses/types" component={ExpenseTypes} />
 
             <Route path="/settings/company" component={CompanySettings} />
 

@@ -14,6 +14,7 @@ import projectsRouter from "./projects";
 import projectSettingsRouter from "./project-settings";
 import storageRouter from "./storage";
 import attachmentsRouter from "./attachments";
+import expensesRouter from "./expenses";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(projectsRouter);
 router.use(projectSettingsRouter);
 router.use(storageRouter);
 router.use(attachmentsRouter);
+router.use(expensesRouter);
 
 export default router;
