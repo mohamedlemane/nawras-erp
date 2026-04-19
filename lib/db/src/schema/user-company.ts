@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { companiesTable } from "./companies";
 import { rolesTable } from "./roles";
 
@@ -8,6 +8,7 @@ export const userCompanyTable = pgTable("user_company", {
   userId: varchar("user_id").notNull(),
   companyId: integer("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
   roleId: integer("role_id").references(() => rolesTable.id),
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
