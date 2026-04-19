@@ -89,7 +89,7 @@ const NAV_ITEMS = [
     items: [
       { title: "Utilisateurs", href: "/admin/users", icon: Users },
       { title: "Rôles & Permissions", href: "/admin/roles", icon: ShieldCheck },
-      { title: "Entreprises", href: "/admin/companies", icon: Building },
+      { title: "Entreprises", href: "/admin/companies", icon: Building, platformOnly: true },
       { title: "Journal d'activité", href: "/admin/audit-logs", icon: ActivitySquare },
     ],
   },
@@ -106,10 +106,21 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user, logout, isAdmin } = useAuth();
 
-  const visibleItems = NAV_ITEMS.filter(item => {
-    if ((item as any).adminOnly) return user?.isSuperAdmin || isAdmin();
-    return true;
-  });
+  const visibleItems = NAV_ITEMS
+    .filter(item => {
+      if ((item as any).adminOnly) return user?.isSuperAdmin || isAdmin();
+      return true;
+    })
+    .map(item => {
+      if (!item.items) return item;
+      return {
+        ...item,
+        items: item.items.filter((sub: any) => {
+          if (sub.platformOnly) return user?.isSuperAdmin;
+          return true;
+        }),
+      };
+    });
 
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">

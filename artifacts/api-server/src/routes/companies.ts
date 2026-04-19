@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db, companiesTable, usersTable, userCompanyTable, rolesTable } from "@workspace/db";
-import { requireAuth, getUserCompanyInfo } from "../lib/rbac";
+import { requireAuth, getUserCompanyInfo, isPlatformSuperAdmin } from "../lib/rbac";
 import { createAuditLog } from "../lib/audit";
 
 const router: IRouter = Router();
@@ -37,8 +37,12 @@ router.get("/public/company-by-subdomain", async (req: Request, res: Response): 
   res.json(company);
 });
 
-// ── List all companies ────────────────────────────────────────────────────────
+// ── List all companies (PLATFORM SUPER ADMIN ONLY) ───────────────────────────
 router.get("/companies", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!isPlatformSuperAdmin(req)) {
+    res.status(403).json({ error: "Accès réservé au super administrateur de la plateforme." });
+    return;
+  }
   const companies = await db.select().from(companiesTable).orderBy(companiesTable.name);
 
   const result = await Promise.all(
@@ -61,8 +65,12 @@ router.get("/companies", requireAuth, async (req: Request, res: Response): Promi
   res.json(result);
 });
 
-// ── Create company ────────────────────────────────────────────────────────────
+// ── Create company (PLATFORM SUPER ADMIN ONLY) ───────────────────────────────
 router.post("/companies", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!isPlatformSuperAdmin(req)) {
+    res.status(403).json({ error: "Seul le super administrateur de la plateforme peut créer des entreprises." });
+    return;
+  }
   const {
     name, subdomain: rawSubdomain, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
     logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode,
@@ -173,8 +181,12 @@ router.get("/companies/:id", requireAuth, async (req: Request, res: Response): P
   res.json(serializeCompany(company));
 });
 
-// ── Update company by ID ──────────────────────────────────────────────────────
+// ── Update company by ID (PLATFORM SUPER ADMIN ONLY) ─────────────────────────
 router.patch("/companies/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!isPlatformSuperAdmin(req)) {
+    res.status(403).json({ error: "Seul le super administrateur de la plateforme peut modifier d'autres entreprises." });
+    return;
+  }
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { name, subdomain: rawSubdomain, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
     logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode, status } = req.body;
