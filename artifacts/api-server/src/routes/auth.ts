@@ -147,6 +147,16 @@ router.get("/auth/me", async (req: Request, res: Response): Promise<void> => {
   }
   const info = await getUserCompanyInfo(req.user.id);
   const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.id, req.user.id)).limit(1);
+
+  // Fetch permissions for this user
+  let permissions: string[] = [];
+  if (info?.companyId && !(dbUser?.isSuperAdmin) && info.roleName !== "super_admin") {
+    const { getUserPermissions } = await import("../lib/rbac");
+    permissions = await getUserPermissions(req.user.id, info.companyId);
+  } else if (info || dbUser?.isSuperAdmin) {
+    permissions = ["*"]; // super_admin / platform admin has all
+  }
+
   res.json({
     id: req.user.id,
     email: req.user.email,
@@ -154,6 +164,7 @@ router.get("/auth/me", async (req: Request, res: Response): Promise<void> => {
     lastName: req.user.lastName,
     profileImageUrl: req.user.profileImageUrl,
     isSuperAdmin: dbUser?.isSuperAdmin ?? false,
+    permissions,
     company: info ?? null,
   });
 });

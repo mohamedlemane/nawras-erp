@@ -20,6 +20,8 @@ const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 const MODULE_LABELS: Record<string, string> = {
   billing: "Facturation",
   hr: "Ressources Humaines",
+  expenses: "Dépenses & Charges",
+  projects: "Projets & Consultations",
   settings: "Paramètres",
   admin: "Administration",
 };
@@ -27,6 +29,8 @@ const MODULE_LABELS: Record<string, string> = {
 const MODULE_COLORS: Record<string, string> = {
   billing: "bg-blue-50 border-blue-200",
   hr: "bg-green-50 border-green-200",
+  expenses: "bg-red-50 border-red-200",
+  projects: "bg-violet-50 border-violet-200",
   settings: "bg-orange-50 border-orange-200",
   admin: "bg-purple-50 border-purple-200",
 };
@@ -34,6 +38,8 @@ const MODULE_COLORS: Record<string, string> = {
 const MODULE_BADGE: Record<string, string> = {
   billing: "bg-blue-100 text-blue-800",
   hr: "bg-green-100 text-green-800",
+  expenses: "bg-red-100 text-red-800",
+  projects: "bg-violet-100 text-violet-800",
   settings: "bg-orange-100 text-orange-800",
   admin: "bg-purple-100 text-purple-800",
 };

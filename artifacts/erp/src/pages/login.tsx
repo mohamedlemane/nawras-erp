@@ -124,7 +124,7 @@ export default function Login() {
           </div>
           <div>
             <CardTitle className="text-3xl font-bold tracking-tight">
-              {isCompanyLogin ? company.name : "Nawras ERP"}
+              {isCompanyLogin ? company.name : "CTA-ONE"}
             </CardTitle>
             <CardDescription className="text-base mt-1">
               {isCompanyLogin

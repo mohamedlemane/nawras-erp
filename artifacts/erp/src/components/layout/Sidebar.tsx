@@ -104,10 +104,10 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
 
   const visibleItems = NAV_ITEMS.filter(item => {
-    if ((item as any).adminOnly) return user?.isSuperAdmin;
+    if ((item as any).adminOnly) return user?.isSuperAdmin || isAdmin();
     return true;
   });
 
@@ -116,7 +116,7 @@ export function Sidebar() {
       <div className="flex h-14 items-center px-4 border-b border-sidebar-border">
         <div className="flex flex-col">
           <span className="text-xl font-bold text-sidebar-primary tracking-tight font-sans">
-            Nawras ERP
+            CTA-ONE
           </span>
           {user?.isSuperAdmin && (
             <span className="text-[10px] font-semibold text-purple-500 uppercase tracking-widest -mt-0.5">

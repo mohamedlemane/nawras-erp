@@ -9,6 +9,7 @@ export interface AuthUser {
   lastName: string | null;
   profileImageUrl: string | null;
   isSuperAdmin: boolean;
+  permissions: string[];
   company: {
     companyId: number;
     roleId: number | null;
@@ -56,5 +57,21 @@ export function useAuth() {
     window.location.href = `${BASE}/login`;
   }, []);
 
-  return { user, isAuthenticated: !!user, isLoading, login, logout };
+  const hasPermission = useCallback((permission: string): boolean => {
+    if (!user) return false;
+    if (user.isSuperAdmin) return true;
+    const perms = user.permissions ?? [];
+    if (perms.includes("*")) return true;
+    return perms.includes(permission);
+  }, [user]);
+
+  const isAdmin = useCallback((): boolean => {
+    if (!user) return false;
+    if (user.isSuperAdmin) return true;
+    const perms = user.permissions ?? [];
+    if (perms.includes("*")) return true;
+    return perms.some((p: string) => p.startsWith("admin."));
+  }, [user]);
+
+  return { user, isAuthenticated: !!user, isLoading, login, logout, hasPermission, isAdmin };
 }

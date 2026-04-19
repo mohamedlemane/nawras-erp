@@ -143,7 +143,7 @@ export default function Dashboard() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Tableau de bord</h1>
-        <p className="text-muted-foreground mt-2">Vue d'ensemble de vos activités — Nawras ERP</p>
+        <p className="text-muted-foreground mt-2">Vue d'ensemble de vos activités — CTA-ONE</p>
       </div>
 
       {/* ─── Bloc Facturation ─────────────────────────────────────────── */}

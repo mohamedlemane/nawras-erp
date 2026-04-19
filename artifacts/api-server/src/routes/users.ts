@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and, ilike, sql } from "drizzle-orm";
+import { hashSync } from "bcryptjs";
 import { db, usersTable, userCompanyTable, rolesTable } from "@workspace/db";
 import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
 
@@ -56,17 +57,26 @@ router.post("/users", requireAuth, async (req: Request, res: Response): Promise<
   const info = await getUserCompanyInfo(req.user.id);
   if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
-  const { email, firstName, lastName, roleId } = req.body;
+  const { email, firstName, lastName, roleId, password } = req.body;
   if (!email || !roleId) {
     res.status(400).json({ error: "email and roleId are required" });
+    return;
+  }
+  if (password && password.length < 6) {
+    res.status(400).json({ error: "Le mot de passe doit avoir au moins 6 caractères" });
     return;
   }
 
   // Check if user exists
   let [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
   if (!user) {
-    // Create placeholder user
-    [user] = await db.insert(usersTable).values({ email, firstName, lastName }).returning();
+    // Create user with optional password
+    const values: any = { email, firstName, lastName };
+    if (password) values.passwordHash = hashSync(password, 10);
+    [user] = await db.insert(usersTable).values(values).returning();
+  } else if (password) {
+    // Update password if provided
+    [user] = await db.update(usersTable).set({ passwordHash: hashSync(password, 10) }).where(eq(usersTable.id, user!.id)).returning();
   }
 
   // Check if already in company
@@ -182,6 +192,31 @@ router.patch("/users/:id", requireAuth, async (req: Request, res: Response): Pro
     return;
   }
   res.json(serializeUser(result));
+});
+
+router.post("/users/:id/reset-password", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const info = await getUserCompanyInfo(req.user.id);
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { password } = req.body;
+  if (!password || password.length < 6) {
+    res.status(400).json({ error: "Le mot de passe doit avoir au moins 6 caractères" });
+    return;
+  }
+
+  // Verify user is in this company
+  const [membership] = await db
+    .select()
+    .from(userCompanyTable)
+    .where(and(eq(userCompanyTable.userId, raw), eq(userCompanyTable.companyId, info.companyId)))
+    .limit(1);
+  if (!membership) { res.status(404).json({ error: "Utilisateur introuvable dans cette entreprise" }); return; }
+
+  await db.update(usersTable).set({ passwordHash: hashSync(password, 10) }).where(eq(usersTable.id, raw));
+  res.json({ success: true });
 });
 
 router.delete("/users/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {

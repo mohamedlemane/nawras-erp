@@ -46,7 +46,7 @@ export default function Onboarding() {
             <Building2 className="w-8 h-8 text-primary" />
           </div>
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold tracking-tight">Bienvenue sur Nawras ERP</CardTitle>
+            <CardTitle className="text-2xl font-bold tracking-tight">Bienvenue sur CTA-ONE</CardTitle>
             <CardDescription className="text-base">
               Configurez votre entreprise pour commencer
             </CardDescription>
