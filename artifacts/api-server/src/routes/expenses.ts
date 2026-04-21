@@ -25,7 +25,7 @@ const DEFAULT_TYPES = [
 router.get("/expense-types", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res, "array")) res.status(403).json({ error: "No company membership" }); return; }
 
   let types = await db
     .select()

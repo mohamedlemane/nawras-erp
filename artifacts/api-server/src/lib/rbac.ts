@@ -9,14 +9,18 @@ export function isPlatformSuperAdmin(req: Request): boolean {
 
 // Handle missing company info — returns appropriate response based on context
 // Returns true if response was sent (caller should return), false if not super admin
-export function handleNoCompany(req: Request, res: Response): boolean {
+// `shape` controls the empty-list response shape for GET-list endpoints.
+export function handleNoCompany(req: Request, res: Response, shape: "paginated" | "array" = "paginated"): boolean {
   if (!isPlatformSuperAdmin(req)) return false;
 
   const hasIdParam = !!req.params?.id;
 
   if (req.method === "GET" && !hasIdParam) {
-    // List routes: return empty paginated response
-    res.json({ data: [], total: 0, page: 1, limit: 20 });
+    if (shape === "array") {
+      res.json([]);
+    } else {
+      res.json({ data: [], total: 0, page: 1, limit: 20 });
+    }
   } else if (req.method === "GET") {
     res.status(404).json({ error: "Ressource introuvable" });
   } else {

@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and, desc } from "drizzle-orm";
 import crypto from "node:crypto";
 import { db, webhooksTable, webhookDeliveriesTable } from "@workspace/db";
-import { requireAuth, getUserCompanyInfo } from "../lib/rbac";
+import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
 import { dispatchWebhookEvent } from "../lib/webhook-dispatcher";
 
 const router: IRouter = Router();
@@ -26,7 +26,7 @@ router.get("/webhooks/events", (_req, res) => {
 router.get("/webhooks", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { res.status(403).json({ error: "No company" }); return; }
+  if (!info) { if (!handleNoCompany(req, res, "array")) res.status(403).json({ error: "No company" }); return; }
 
   const hooks = await db.select().from(webhooksTable)
     .where(eq(webhooksTable.companyId, info.companyId))

@@ -11,7 +11,7 @@ const router: IRouter = Router();
 router.get("/departments", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res, "array")) res.status(403).json({ error: "No company membership" }); return; }
 
   const depts = await db.select().from(departmentsTable).where(eq(departmentsTable.companyId, info.companyId)).orderBy(departmentsTable.name);
   
@@ -67,7 +67,7 @@ router.delete("/departments/:id", requireAuth, async (req: Request, res: Respons
 router.get("/positions", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res, "array")) res.status(403).json({ error: "No company membership" }); return; }
 
   const positions = await db.select().from(positionsTable).where(eq(positionsTable.companyId, info.companyId)).orderBy(positionsTable.name);
   res.json(positions.map((p) => ({ ...p, createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() })));
@@ -262,7 +262,7 @@ router.patch("/contracts/:id", requireAuth, async (req: Request, res: Response):
 router.get("/leave-types", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const info = await getUserCompanyInfo(req.user.id);
-  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+  if (!info) { if (!handleNoCompany(req, res, "array")) res.status(403).json({ error: "No company membership" }); return; }
 
   const types = await db.select().from(leaveTypesTable).where(eq(leaveTypesTable.companyId, info.companyId)).orderBy(leaveTypesTable.name);
   res.json(types.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() })));
