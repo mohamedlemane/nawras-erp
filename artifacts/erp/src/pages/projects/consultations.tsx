@@ -59,6 +59,17 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return body;
 }
 
+function deadlineStatus(deadlineAt: string) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d = new Date(deadlineAt); d.setHours(0, 0, 0, 0);
+  const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
+  if (diff < 0) return { label: `Dépassé de ${Math.abs(diff)} j`, cls: "text-destructive font-semibold", badge: "bg-red-100 text-red-700" };
+  if (diff === 0) return { label: "Aujourd'hui !", cls: "text-orange-600 font-semibold", badge: "bg-orange-100 text-orange-700" };
+  if (diff === 1) return { label: "Demain", cls: "text-orange-500 font-medium", badge: "bg-orange-100 text-orange-700" };
+  if (diff <= 7) return { label: `${diff} j restants`, cls: "text-amber-600 font-medium", badge: "bg-amber-100 text-amber-700" };
+  return { label: `${diff} j restants`, cls: "text-muted-foreground", badge: "bg-gray-100 text-gray-600" };
+}
+
 interface Consultation {
   id: number; reference: string; title: string; partnerId?: number;
   clientRef?: string; type: string; serviceTypes?: string;
@@ -320,7 +331,15 @@ export default function Consultations() {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm">
-                      {c.deadlineAt ? format(new Date(c.deadlineAt), "dd MMM yyyy", { locale: fr }) : "—"}
+                      {c.deadlineAt ? (() => {
+                        const ds = deadlineStatus(c.deadlineAt);
+                        return (
+                          <div>
+                            <p className="text-xs text-muted-foreground">{format(new Date(c.deadlineAt), "dd MMM yyyy", { locale: fr })}</p>
+                            <span className={`text-xs ${ds.cls}`}>{ds.label}</span>
+                          </div>
+                        );
+                      })() : "—"}
                     </TableCell>
                     <TableCell className="text-sm font-medium">
                       {c.estimatedAmount
@@ -533,10 +552,16 @@ export default function Consultations() {
                 {detailItem.clientRef && (
                   <div><p className="text-muted-foreground">Réf. client</p><p className="font-medium">{detailItem.clientRef}</p></div>
                 )}
-                {detailItem.deadlineAt && (
-                  <div><p className="text-muted-foreground">Date limite</p>
-                    <p className="font-medium">{format(new Date(detailItem.deadlineAt), "dd MMMM yyyy", { locale: fr })}</p></div>
-                )}
+                {detailItem.deadlineAt && (() => {
+                  const ds = deadlineStatus(detailItem.deadlineAt);
+                  return (
+                    <div>
+                      <p className="text-muted-foreground">Date limite</p>
+                      <p className="font-medium">{format(new Date(detailItem.deadlineAt), "dd MMMM yyyy", { locale: fr })}</p>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium mt-1 ${ds.badge}`}>{ds.label}</span>
+                    </div>
+                  );
+                })()}
                 {detailItem.estimatedAmount && (
                   <div className="col-span-2"><p className="text-muted-foreground">Montant estimé</p>
                     <p className="font-medium text-lg">{Number(detailItem.estimatedAmount).toLocaleString("fr-FR")} {detailItem.currency}</p></div>
