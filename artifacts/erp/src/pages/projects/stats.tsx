@@ -12,38 +12,18 @@ import {
   Tooltip as RTooltip, PieChart, Pie, Cell, Legend, LineChart, Line,
 } from "recharts";
 import { ChevronDown, Filter, TrendingUp, Award, XCircle, Clock, RotateCcw } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
-const STATUS_MAP: Record<string, { label: string; color: string; hex: string }> = {
-  recu:                  { label: "Reçu",                hex: "#60a5fa", color: "bg-blue-100 text-blue-700" },
-  en_etude:              { label: "En étude",            hex: "#818cf8", color: "bg-indigo-100 text-indigo-700" },
-  proposition_envoyee:   { label: "Proposition envoyée", hex: "#fb923c", color: "bg-orange-100 text-orange-700" },
-  en_negociation:        { label: "Négociation",         hex: "#f59e0b", color: "bg-amber-100 text-amber-700" },
-  attribue:              { label: "Attribuée",           hex: "#22c55e", color: "bg-green-100 text-green-700" },
-  perdu:                 { label: "Perdue",              hex: "#f87171", color: "bg-red-100 text-red-700" },
-  annule:                { label: "Annulée",             hex: "#94a3b8", color: "bg-gray-100 text-gray-600" },
-};
-
-const TYPE_MAP: Record<string, string> = {
-  rfq: "Appel d'offres (RFQ)",
-  appel_offre: "Appel d'offres public",
-  gre_a_gre: "Gré à gré",
-  autre: "Autre",
-};
-
-const SERVICE_LABELS: Record<string, string> = {
-  geotechnique: "Géotechnique",
-  bathymetrie: "Bathymétrie",
-  essais: "Essais laboratoire",
-  topographie: "Topographie",
-  inspection: "Inspection sous-marine",
-  environnement: "Étude environnementale",
-  hydrographie: "Hydrographie",
-  forage: "Forage",
-  autre: "Autre",
+// ─── Status (fixed, not configurable) ─────────────────────────────────────────
+const STATUS_MAP: Record<string, { label: string; hex: string }> = {
+  recu:                  { label: "Reçu",                hex: "#60a5fa" },
+  en_etude:              { label: "En étude",            hex: "#818cf8" },
+  proposition_envoyee:   { label: "Proposition envoyée", hex: "#fb923c" },
+  en_negociation:        { label: "Négociation",         hex: "#f59e0b" },
+  attribue:              { label: "Attribuée",           hex: "#22c55e" },
+  perdu:                 { label: "Perdue",              hex: "#f87171" },
+  annule:                { label: "Annulée",             hex: "#94a3b8" },
 };
 
 const PIE_COLORS = ["#3b82f6","#22c55e","#f59e0b","#a78bfa","#f87171","#60a5fa","#34d399","#fb923c","#818cf8","#94a3b8"];
@@ -55,9 +35,15 @@ const MONTHS = [
   { value: "10", label: "Octobre" },{ value: "11", label: "Novembre" },{ value: "12", label: "Décembre" },
 ];
 
+interface ConfigType { id: number; code: string; label: string; isActive: boolean; sortOrder: number; }
+
 function fmtNum(n: number) { return n.toLocaleString("fr-FR"); }
 function fmtAmt(n: number, cur?: string) {
   return `${n.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}${cur ? " " + cur : ""}`;
+}
+
+function apiFetch(path: string) {
+  return fetch(`${BASE}${path}`, { credentials: "include" }).then(r => r.json());
 }
 
 function StatCard({ title, value, sub, icon: Icon, color }: {
@@ -80,14 +66,34 @@ function StatCard({ title, value, sub, icon: Icon, color }: {
 interface Filters {
   from: string; to: string; status: string; type: string; currency: string; year: string; month: string;
 }
-
-const EMPTY_FILTERS: Filters = { from: "", to: "", status: "", type: "", currency: "", year: "", month: "" };
+const EMPTY: Filters = { from: "", to: "", status: "", type: "", currency: "", year: "", month: "" };
 
 export default function ConsultationsStats() {
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [applied, setApplied] = useState<Filters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<Filters>(EMPTY);
+  const [applied, setApplied] = useState<Filters>(EMPTY);
   const [filtersOpen, setFiltersOpen] = useState(true);
 
+  // ── Reference data from DB ─────────────────────────────────────────────────
+  const { data: consultationTypes = [] } = useQuery<ConfigType[]>({
+    queryKey: ["project-consultation-types"],
+    queryFn: () => apiFetch("/api/project-consultation-types"),
+  });
+
+  const { data: serviceTypes = [] } = useQuery<ConfigType[]>({
+    queryKey: ["project-service-types"],
+    queryFn: () => apiFetch("/api/project-service-types"),
+  });
+
+  // Build lookup maps (code → label) from DB data
+  const typeLabel = useMemo(() => Object.fromEntries(
+    consultationTypes.filter(t => t.isActive).map(t => [t.code, t.label])
+  ), [consultationTypes]);
+
+  const serviceLabel = useMemo(() => Object.fromEntries(
+    serviceTypes.filter(t => t.isActive).map(t => [t.code, t.label])
+  ), [serviceTypes]);
+
+  // ── Stats query ────────────────────────────────────────────────────────────
   const params = useMemo(() => {
     const p = new URLSearchParams();
     if (applied.from) p.set("from", applied.from);
@@ -102,22 +108,34 @@ export default function ConsultationsStats() {
 
   const { data, isLoading } = useQuery<any>({
     queryKey: ["consultations-stats", params],
-    queryFn: () => fetch(`${BASE}/api/consultations/stats${params ? "?" + params : ""}`, { credentials: "include" }).then(r => r.json()),
+    queryFn: () => apiFetch(`/api/consultations/stats${params ? "?" + params : ""}`),
   });
 
   const activeFiltersCount = Object.values(applied).filter(Boolean).length;
-
   const handleApply = () => setApplied({ ...filters });
-  const handleReset = () => { setFilters(EMPTY_FILTERS); setApplied(EMPTY_FILTERS); };
+  const handleReset = () => { setFilters(EMPTY); setApplied(EMPTY); };
 
+  // ── Derived chart data ─────────────────────────────────────────────────────
   const summary = data?.summary ?? {};
+
   const byStatus = (data?.byStatus ?? []).map((r: any) => ({
-    ...r, name: STATUS_MAP[r.status]?.label ?? r.status, fill: STATUS_MAP[r.status]?.hex ?? "#94a3b8",
+    ...r,
+    name: STATUS_MAP[r.status]?.label ?? r.status,
+    fill: STATUS_MAP[r.status]?.hex ?? "#94a3b8",
   }));
-  const byType = (data?.byType ?? []).map((r: any) => ({ ...r, name: TYPE_MAP[r.type] ?? r.type }));
-  const byServiceType = (data?.byServiceType ?? []).map((r: any) => ({ ...r, name: SERVICE_LABELS[r.code] ?? r.code }));
+
+  const byType = (data?.byType ?? []).map((r: any) => ({
+    ...r,
+    name: typeLabel[r.type] ?? r.type,
+  }));
+
+  const byServiceType = (data?.byServiceType ?? []).map((r: any) => ({
+    ...r,
+    name: serviceLabel[r.code] ?? r.code,
+  }));
+
   const byCountry = (data?.byCountry ?? []).filter((r: any) => r.country);
-  const byCity = (data?.byCity ?? []).filter((r: any) => r.city).map((r: any) => ({ ...r, name: r.city }));
+  const byCity = (data?.byCity ?? []).filter((r: any) => r.city);
   const byMonth = data?.byMonth ?? [];
   const byYear = (data?.byYear ?? []).map((r: any) => ({ ...r, name: String(r.year) }));
   const byCurrency = data?.byCurrency ?? [];
@@ -126,6 +144,9 @@ export default function ConsultationsStats() {
     const cur = new Date().getFullYear();
     return Array.from({ length: 8 }, (_, i) => String(cur - i));
   }, []);
+
+  const activeConsultationTypes = useMemo(() => consultationTypes.filter(t => t.isActive).sort((a, b) => a.sortOrder - b.sortOrder), [consultationTypes]);
+  const activeServiceTypes = useMemo(() => serviceTypes.filter(t => t.isActive).sort((a, b) => a.sortOrder - b.sortOrder), [serviceTypes]);
 
   return (
     <div className="space-y-6">
@@ -167,17 +188,39 @@ export default function ConsultationsStats() {
                     <SelectTrigger><SelectValue placeholder="Tous" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_all">Tous les statuts</SelectItem>
-                      {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                      {Object.entries(STATUS_MAP).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Type</Label>
+                  <Label className="text-xs">Type de consultation</Label>
                   <Select value={filters.type || "_all"} onValueChange={v => setFilters(f => ({ ...f, type: v === "_all" ? "" : v }))}>
                     <SelectTrigger><SelectValue placeholder="Tous" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_all">Tous les types</SelectItem>
-                      {Object.entries(TYPE_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                      {activeConsultationTypes.length > 0
+                        ? activeConsultationTypes.map(t => (
+                            <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>
+                          ))
+                        : <SelectItem value="_none" disabled>Aucun type configuré</SelectItem>
+                      }
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Type de prestation</Label>
+                  <Select value={filters.type || "_all"} onValueChange={v => setFilters(f => ({ ...f, type: v === "_all" ? "" : v }))}>
+                    <SelectTrigger><SelectValue placeholder="Tous" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_all">Toutes les prestations</SelectItem>
+                      {activeServiceTypes.length > 0
+                        ? activeServiceTypes.map(t => (
+                            <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>
+                          ))
+                        : <SelectItem value="_none" disabled>Aucun type configuré</SelectItem>
+                      }
                     </SelectContent>
                   </Select>
                 </div>
@@ -187,7 +230,9 @@ export default function ConsultationsStats() {
                     <SelectTrigger><SelectValue placeholder="Toutes" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_all">Toutes les devises</SelectItem>
-                      {["MRU","USD","EUR","XOF","MAD","GBP","CNY"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      {["MRU","USD","EUR","XOF","MAD","GBP","CNY"].map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -211,7 +256,7 @@ export default function ConsultationsStats() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-end gap-2">
+                <div className="flex items-end gap-2 lg:col-start-4">
                   <Button className="flex-1" onClick={handleApply}>Appliquer</Button>
                   <Button variant="outline" size="icon" onClick={handleReset} title="Réinitialiser">
                     <RotateCcw className="w-4 h-4" />
@@ -229,7 +274,7 @@ export default function ConsultationsStats() {
         </div>
       ) : (
         <>
-          {/* KPI Cards */}
+          {/* KPI */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard title="Total" value={fmtNum(summary.total ?? 0)} icon={TrendingUp} color="text-blue-600" sub="Consultations analysées" />
             <StatCard title="Attribuées" value={fmtNum(summary.attribue ?? 0)} icon={Award} color="text-green-600" sub="Marchés remportés" />
@@ -244,9 +289,9 @@ export default function ConsultationsStats() {
             />
           </div>
 
-          {/* Charts row 1 */}
+          {/* Charts */}
           <div className="grid gap-6 lg:grid-cols-2">
-            {/* By Status */}
+            {/* Par statut */}
             <Card>
               <CardHeader><CardTitle className="text-sm">Par statut</CardTitle></CardHeader>
               <CardContent>
@@ -256,7 +301,7 @@ export default function ConsultationsStats() {
                       <BarChart data={byStatus} layout="vertical" margin={{ left: 30, right: 20, top: 4, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
                         <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                        <YAxis type="category" dataKey="name" fontSize={11} tickLine={false} axisLine={false} width={120} />
+                        <YAxis type="category" dataKey="name" fontSize={11} tickLine={false} axisLine={false} width={130} />
                         <RTooltip formatter={(v: number) => [fmtNum(v), "Consultations"]} contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))" }} />
                         <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                           {byStatus.map((entry: any, i: number) => <Cell key={i} fill={entry.fill} />)}
@@ -268,7 +313,7 @@ export default function ConsultationsStats() {
               </CardContent>
             </Card>
 
-            {/* By Type */}
+            {/* Par type de consultation */}
             <Card>
               <CardHeader><CardTitle className="text-sm">Par type de consultation</CardTitle></CardHeader>
               <CardContent>
@@ -289,7 +334,7 @@ export default function ConsultationsStats() {
               </CardContent>
             </Card>
 
-            {/* By Service Type */}
+            {/* Par type de prestation */}
             <Card>
               <CardHeader><CardTitle className="text-sm">Par type de prestation</CardTitle></CardHeader>
               <CardContent>
@@ -299,9 +344,9 @@ export default function ConsultationsStats() {
                       <BarChart data={byServiceType} layout="vertical" margin={{ left: 30, right: 20, top: 4, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
                         <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                        <YAxis type="category" dataKey="name" fontSize={11} tickLine={false} axisLine={false} width={130} />
+                        <YAxis type="category" dataKey="name" fontSize={11} tickLine={false} axisLine={false} width={140} />
                         <RTooltip formatter={(v: number) => [fmtNum(v), "Consultations"]} contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))" }} />
-                        <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]}>
+                        <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                           {byServiceType.map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                         </Bar>
                       </BarChart>
@@ -311,7 +356,7 @@ export default function ConsultationsStats() {
               </CardContent>
             </Card>
 
-            {/* By Country */}
+            {/* Par pays */}
             <Card>
               <CardHeader><CardTitle className="text-sm">Par pays du partenaire</CardTitle></CardHeader>
               <CardContent>
@@ -323,7 +368,7 @@ export default function ConsultationsStats() {
                         <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
                         <YAxis type="category" dataKey="country" fontSize={11} tickLine={false} axisLine={false} width={110} />
                         <RTooltip formatter={(v: number) => [fmtNum(v), "Consultations"]} contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))" }} />
-                        <Bar dataKey="count" fill="#22c55e" radius={[0, 4, 4, 0]}>
+                        <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                           {byCountry.map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                         </Bar>
                       </BarChart>
@@ -333,7 +378,7 @@ export default function ConsultationsStats() {
               </CardContent>
             </Card>
 
-            {/* By City */}
+            {/* Par ville */}
             {byCity.length > 0 && (
               <Card>
                 <CardHeader><CardTitle className="text-sm">Par localité (ville)</CardTitle></CardHeader>
@@ -343,7 +388,7 @@ export default function ConsultationsStats() {
                       <BarChart data={byCity.slice(0, 15)} layout="vertical" margin={{ left: 20, right: 20, top: 4, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
                         <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                        <YAxis type="category" dataKey="name" fontSize={11} tickLine={false} axisLine={false} width={110} />
+                        <YAxis type="category" dataKey="city" fontSize={11} tickLine={false} axisLine={false} width={110} />
                         <RTooltip formatter={(v: number) => [fmtNum(v), "Consultations"]} contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))" }} />
                         <Bar dataKey="count" fill="#a78bfa" radius={[0, 4, 4, 0]} />
                       </BarChart>
@@ -353,7 +398,7 @@ export default function ConsultationsStats() {
               </Card>
             )}
 
-            {/* By Month */}
+            {/* Évolution mensuelle */}
             <Card className={byCity.length > 0 ? "" : "lg:col-span-2"}>
               <CardHeader><CardTitle className="text-sm">Évolution mensuelle</CardTitle></CardHeader>
               <CardContent>
@@ -373,7 +418,7 @@ export default function ConsultationsStats() {
               </CardContent>
             </Card>
 
-            {/* By Year */}
+            {/* Par année */}
             <Card>
               <CardHeader><CardTitle className="text-sm">Par année</CardTitle></CardHeader>
               <CardContent>
@@ -394,7 +439,7 @@ export default function ConsultationsStats() {
             </Card>
           </div>
 
-          {/* Currency breakdown */}
+          {/* Tableau devises */}
           {byCurrency.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-sm">Répartition par devise</CardTitle></CardHeader>

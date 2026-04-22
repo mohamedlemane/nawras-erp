@@ -31,6 +31,83 @@ router.get("/consultations", requirePermission("view_billing"), async (req: Requ
   res.json({ data: rows, total: rows.length });
 });
 
+// ── GET /consultations/stats ───────────────────────────────────────────────────
+router.get("/consultations/stats", requirePermission("view_consultations"), async (req: Request, res: Response): Promise<void> => {
+  const cid = getCid(req);
+  if (!cid) { res.json({ summary: {}, byStatus: [], byType: [], byServiceType: [], byCurrency: [], byCountry: [], byCity: [], byMonth: [], byYear: [] }); return; }
+
+  const { from, to, status, type, currency, year, month } = req.query;
+
+  const conds: any[] = [eq(consultationsTable.companyId, cid)];
+  if (from) conds.push(gte(consultationsTable.receivedAt, new Date(String(from))));
+  if (to) conds.push(lte(consultationsTable.receivedAt, new Date(String(to))));
+  if (status) conds.push(eq(consultationsTable.status, String(status)));
+  if (type) conds.push(eq(consultationsTable.type, String(type)));
+  if (currency) conds.push(eq(consultationsTable.currency, String(currency)));
+  if (year) conds.push(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})::int = ${parseInt(String(year), 10)}`);
+  if (month) conds.push(sql`EXTRACT(MONTH FROM ${consultationsTable.receivedAt})::int = ${parseInt(String(month), 10)}`);
+
+  const where = conds.length > 1 ? and(...conds) : conds[0];
+
+  const [byStatusRows, byTypeRows, byCurrencyRows, byCountryRows, byCityRows, byMonthRows, byYearRows, allRows] = await Promise.all([
+    db.select({ status: consultationsTable.status, count: sql<number>`count(*)::int`, totalAmount: sql<number>`coalesce(sum(estimated_amount::float), 0)` })
+      .from(consultationsTable).where(where).groupBy(consultationsTable.status),
+    db.select({ type: consultationsTable.type, count: sql<number>`count(*)::int`, totalAmount: sql<number>`coalesce(sum(estimated_amount::float), 0)` })
+      .from(consultationsTable).where(where).groupBy(consultationsTable.type),
+    db.select({ currency: consultationsTable.currency, count: sql<number>`count(*)::int`, totalAmount: sql<number>`coalesce(sum(estimated_amount::float), 0)` })
+      .from(consultationsTable).where(where).groupBy(consultationsTable.currency),
+    db.select({ country: partnersTable.country, count: sql<number>`count(*)::int` })
+      .from(consultationsTable).leftJoin(partnersTable, eq(consultationsTable.partnerId, partnersTable.id))
+      .where(where).groupBy(partnersTable.country),
+    db.select({ city: partnersTable.city, count: sql<number>`count(*)::int` })
+      .from(consultationsTable).leftJoin(partnersTable, eq(consultationsTable.partnerId, partnersTable.id))
+      .where(where).groupBy(partnersTable.city),
+    db.select({
+      yr: sql<number>`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})::int`,
+      mo: sql<number>`EXTRACT(MONTH FROM ${consultationsTable.receivedAt})::int`,
+      count: sql<number>`count(*)::int`,
+      totalAmount: sql<number>`coalesce(sum(estimated_amount::float), 0)`,
+    }).from(consultationsTable).where(where)
+      .groupBy(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt}), EXTRACT(MONTH FROM ${consultationsTable.receivedAt})`)
+      .orderBy(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt}), EXTRACT(MONTH FROM ${consultationsTable.receivedAt})`),
+    db.select({
+      yr: sql<number>`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})::int`,
+      count: sql<number>`count(*)::int`,
+      totalAmount: sql<number>`coalesce(sum(estimated_amount::float), 0)`,
+    }).from(consultationsTable).where(where)
+      .groupBy(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})`)
+      .orderBy(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})`),
+    db.select({ serviceTypes: consultationsTable.serviceTypes }).from(consultationsTable).where(where),
+  ]);
+
+  const stMap: Record<string, number> = {};
+  for (const row of allRows) {
+    if (!row.serviceTypes) continue;
+    try { const arr: string[] = JSON.parse(row.serviceTypes); for (const s of arr) stMap[s] = (stMap[s] ?? 0) + 1; } catch {}
+  }
+  const byServiceType = Object.entries(stMap).map(([code, count]) => ({ code, count })).sort((a, b) => b.count - a.count);
+
+  const total = byStatusRows.reduce((s, r) => s + r.count, 0);
+  const attribue = byStatusRows.find(r => r.status === "attribue")?.count ?? 0;
+  const perdu = byStatusRows.find(r => r.status === "perdu")?.count ?? 0;
+  const annule = byStatusRows.find(r => r.status === "annule")?.count ?? 0;
+  const inProgress = byStatusRows.filter(r => ["recu","en_etude","proposition_envoyee","en_negociation"].includes(r.status)).reduce((s, r) => s + r.count, 0);
+  const winRate = (attribue + perdu) > 0 ? Math.round((attribue / (attribue + perdu)) * 100) : 0;
+  const MONTHS_FR = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+
+  res.json({
+    summary: { total, attribue, perdu, annule, inProgress, winRate },
+    byStatus: byStatusRows.map(r => ({ status: r.status, count: r.count, totalAmount: r.totalAmount })),
+    byType: byTypeRows.map(r => ({ type: r.type, count: r.count, totalAmount: r.totalAmount })),
+    byServiceType,
+    byCurrency: byCurrencyRows.map(r => ({ currency: r.currency, count: r.count, totalAmount: r.totalAmount })),
+    byCountry: byCountryRows.filter(r => r.country).map(r => ({ country: r.country!, count: r.count })).sort((a, b) => b.count - a.count),
+    byCity: byCityRows.filter(r => r.city).map(r => ({ city: r.city!, count: r.count })).sort((a, b) => b.count - a.count),
+    byMonth: byMonthRows.map(r => ({ year: r.yr, month: r.mo, label: `${MONTHS_FR[r.mo - 1]} ${r.yr}`, count: r.count, totalAmount: r.totalAmount })),
+    byYear: byYearRows.map(r => ({ year: r.yr, count: r.count, totalAmount: r.totalAmount })),
+  });
+});
+
 router.get("/consultations/:id", requirePermission("view_billing"), async (req: Request, res: Response): Promise<void> => {
   const cid = getCid(req);
   if (!cid) { res.status(404).json({ error: "Non trouvé" }); return; }
@@ -420,89 +497,6 @@ router.get("/projects-stats", requirePermission("view_billing"), async (req: Req
     tauxAttribution: total > 0 ? Math.round((attribuees / total) * 100) : 0,
     projects: Number(pStats.total),
     activeProjects: Number(pStats.actifs),
-  });
-});
-
-// ── GET /consultations/stats ───────────────────────────────────────────────────
-router.get("/consultations/stats", requirePermission("view_consultations"), async (req: Request, res: Response): Promise<void> => {
-  const cid = getCid(req);
-  if (!cid) { res.json({ summary: {}, byStatus: [], byType: [], byServiceType: [], byCurrency: [], byCountry: [], byCity: [], byMonth: [], byYear: [] }); return; }
-
-  const { from, to, status, type, currency, year, month } = req.query;
-
-  const conds: any[] = [eq(consultationsTable.companyId, cid)];
-  if (from) conds.push(gte(consultationsTable.receivedAt, new Date(String(from))));
-  if (to) conds.push(lte(consultationsTable.receivedAt, new Date(String(to))));
-  if (status) conds.push(eq(consultationsTable.status, String(status)));
-  if (type) conds.push(eq(consultationsTable.type, String(type)));
-  if (currency) conds.push(eq(consultationsTable.currency, String(currency)));
-  if (year) conds.push(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})::int = ${parseInt(String(year), 10)}`);
-  if (month) conds.push(sql`EXTRACT(MONTH FROM ${consultationsTable.receivedAt})::int = ${parseInt(String(month), 10)}`);
-
-  const where = conds.length > 1 ? and(...conds) : conds[0];
-
-  const [byStatus, byType, byCurrency, byCountry, byCity, byMonth, byYear, allRows] = await Promise.all([
-    db.select({ status: consultationsTable.status, count: sql<number>`count(*)::int`, totalAmount: sql<number>`coalesce(sum(estimated_amount::float), 0)` })
-      .from(consultationsTable).where(where).groupBy(consultationsTable.status),
-    db.select({ type: consultationsTable.type, count: sql<number>`count(*)::int`, totalAmount: sql<number>`coalesce(sum(estimated_amount::float), 0)` })
-      .from(consultationsTable).where(where).groupBy(consultationsTable.type),
-    db.select({ currency: consultationsTable.currency, count: sql<number>`count(*)::int`, totalAmount: sql<number>`coalesce(sum(estimated_amount::float), 0)` })
-      .from(consultationsTable).where(where).groupBy(consultationsTable.currency),
-    db.select({ country: partnersTable.country, count: sql<number>`count(*)::int` })
-      .from(consultationsTable).leftJoin(partnersTable, eq(consultationsTable.partnerId, partnersTable.id))
-      .where(where).groupBy(partnersTable.country),
-    db.select({ city: partnersTable.city, count: sql<number>`count(*)::int` })
-      .from(consultationsTable).leftJoin(partnersTable, eq(consultationsTable.partnerId, partnersTable.id))
-      .where(where).groupBy(partnersTable.city),
-    db.select({
-      yr: sql<number>`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})::int`,
-      mo: sql<number>`EXTRACT(MONTH FROM ${consultationsTable.receivedAt})::int`,
-      count: sql<number>`count(*)::int`,
-      totalAmount: sql<number>`coalesce(sum(estimated_amount::float), 0)`,
-    }).from(consultationsTable).where(where)
-      .groupBy(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt}), EXTRACT(MONTH FROM ${consultationsTable.receivedAt})`)
-      .orderBy(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt}), EXTRACT(MONTH FROM ${consultationsTable.receivedAt})`),
-    db.select({
-      yr: sql<number>`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})::int`,
-      count: sql<number>`count(*)::int`,
-      totalAmount: sql<number>`coalesce(sum(estimated_amount::float), 0)`,
-    }).from(consultationsTable).where(where)
-      .groupBy(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})`)
-      .orderBy(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})`),
-    db.select({ serviceTypes: consultationsTable.serviceTypes }).from(consultationsTable).where(where),
-  ]);
-
-  // Parse service types from JSON text
-  const stMap: Record<string, number> = {};
-  for (const row of allRows) {
-    if (!row.serviceTypes) continue;
-    try {
-      const arr: string[] = JSON.parse(row.serviceTypes);
-      for (const s of arr) stMap[s] = (stMap[s] ?? 0) + 1;
-    } catch {}
-  }
-  const byServiceType = Object.entries(stMap).map(([code, count]) => ({ code, count })).sort((a, b) => b.count - a.count);
-
-  const total = byStatus.reduce((s, r) => s + r.count, 0);
-  const attribue = byStatus.find(r => r.status === "attribue")?.count ?? 0;
-  const perdu = byStatus.find(r => r.status === "perdu")?.count ?? 0;
-  const annule = byStatus.find(r => r.status === "annule")?.count ?? 0;
-  const inProgress = byStatus.filter(r => ["recu", "en_etude", "proposition_envoyee", "en_negociation"].includes(r.status)).reduce((s, r) => s + r.count, 0);
-  const winRate = (attribue + perdu) > 0 ? Math.round((attribue / (attribue + perdu)) * 100) : 0;
-  const totalEstimated = byStatus.reduce((s, r) => s + r.totalAmount, 0);
-
-  const MONTHS_FR = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
-
-  res.json({
-    summary: { total, attribue, perdu, annule, inProgress, winRate, totalEstimated },
-    byStatus: byStatus.map(r => ({ status: r.status, count: r.count, totalAmount: r.totalAmount })),
-    byType: byType.map(r => ({ type: r.type, count: r.count, totalAmount: r.totalAmount })),
-    byServiceType,
-    byCurrency: byCurrency.map(r => ({ currency: r.currency, count: r.count, totalAmount: r.totalAmount })),
-    byCountry: byCountry.filter(r => r.country).map(r => ({ country: r.country!, count: r.count })).sort((a, b) => b.count - a.count),
-    byCity: byCity.filter(r => r.city).map(r => ({ city: r.city!, count: r.count })).sort((a, b) => b.count - a.count),
-    byMonth: byMonth.map(r => ({ year: r.yr, month: r.mo, label: `${MONTHS_FR[r.mo - 1]} ${r.yr}`, count: r.count, totalAmount: r.totalAmount })),
-    byYear: byYear.map(r => ({ year: r.yr, count: r.count, totalAmount: r.totalAmount })),
   });
 });
 
