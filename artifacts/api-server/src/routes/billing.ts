@@ -260,6 +260,14 @@ router.delete("/proformas/:id", requireAuth, async (req: Request, res: Response)
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
+
+  const [existing] = await db.select({ status: proformasTable.status }).from(proformasTable).where(and(eq(proformasTable.id, id), eq(proformasTable.companyId, info.companyId))).limit(1);
+  if (!existing) { res.status(404).json({ error: "Proforma introuvable" }); return; }
+  if (existing.status !== "draft") {
+    res.status(409).json({ error: "Impossible de supprimer cette proforma car elle n'est plus en brouillon.", code: "PROFORMA_LOCKED" });
+    return;
+  }
+
   await db.delete(proformasTable).where(and(eq(proformasTable.id, id), eq(proformasTable.companyId, info.companyId)));
   res.sendStatus(204);
 });
@@ -368,6 +376,14 @@ router.delete("/invoices/:id", requireAuth, async (req: Request, res: Response):
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
+
+  const [existing] = await db.select({ status: invoicesTable.status }).from(invoicesTable).where(and(eq(invoicesTable.id, id), eq(invoicesTable.companyId, info.companyId))).limit(1);
+  if (!existing) { res.status(404).json({ error: "Facture introuvable" }); return; }
+  if (existing.status !== "draft") {
+    res.status(409).json({ error: "Impossible de supprimer cette facture car elle n'est plus en brouillon.", code: "INVOICE_LOCKED" });
+    return;
+  }
+
   await db.delete(invoicesTable).where(and(eq(invoicesTable.id, id), eq(invoicesTable.companyId, info.companyId)));
   res.sendStatus(204);
 });

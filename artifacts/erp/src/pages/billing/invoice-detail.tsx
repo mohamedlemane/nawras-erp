@@ -1,20 +1,28 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
-import { useGetInvoice, useValidateInvoice } from "@workspace/api-client-react";
+import { useParams, Link, useLocation } from "wouter";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useGetInvoice, useValidateInvoice, deleteInvoice } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PrintDocument } from "@/components/print/PrintDocument";
-import { ArrowLeft, CheckCircle, Printer } from "lucide-react";
+import { ArrowLeft, CheckCircle, Printer, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useCurrency } from "@/hooks/use-currency";
+import { useToast } from "@/hooks/use-toast";
 
 export default function InvoiceDetail() {
   const { id } = useParams();
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: invoice, isLoading } = useGetInvoice(Number(id), { query: { enabled: !!id, queryKey: ["invoice", id] } });
   const [showPrint, setShowPrint] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const validateInvoice = useValidateInvoice({
     mutation: {
@@ -22,6 +30,16 @@ export default function InvoiceDetail() {
         queryClient.invalidateQueries({ queryKey: ["invoice", id] });
       },
     },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteInvoice(Number(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      toast({ title: "Facture supprimée" });
+      navigate("/billing/invoices");
+    },
+    onError: (e: Error) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
   });
 
   const { formatCurrency, amountInWords, currency } = useCurrency(invoice?.currency);
@@ -44,13 +62,23 @@ export default function InvoiceDetail() {
           </div>
           <div className="flex gap-2">
             {invoice.status === "draft" && (
-              <Button
-                onClick={() => validateInvoice.mutate({ id: Number(id) })}
-                disabled={validateInvoice.isPending}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle className="w-4 h-4 mr-2" /> Valider
-              </Button>
+              <>
+                <Button
+                  onClick={() => validateInvoice.mutate({ id: Number(id) })}
+                  disabled={validateInvoice.isPending || deleteMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" /> Valider
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive/10"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={validateInvoice.isPending || deleteMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+                </Button>
+              </>
             )}
             <Button variant="outline" onClick={() => setShowPrint(true)}>
               <Printer className="w-4 h-4 mr-2" /> Imprimer
@@ -175,6 +203,26 @@ export default function InvoiceDetail() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette facture ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La facture {invoice.invoiceNumber} sera définitivement supprimée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => deleteMutation.mutate()}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {showPrint && (
         <PrintDocument

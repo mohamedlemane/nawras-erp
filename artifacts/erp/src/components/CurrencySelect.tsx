@@ -1,7 +1,7 @@
 import { CURRENCIES, type CurrencyDef } from "@/lib/currencies";
 import { Label } from "@/components/ui/label";
 import ReactSelect from "react-select";
-import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
+import { rsClassNames } from "@/lib/rs-styles";
 import { useGetMyCompany } from "@workspace/api-client-react";
 
 interface Props {
@@ -64,8 +64,8 @@ export function CurrencySelect({ value, onChange, label = "Monnaie", showDefault
       <ReactSelect
         unstyled
         classNames={rsClassNames}
-        styles={rsPortalStyles}
-        menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+        styles={{ menu: (base) => ({ ...base, zIndex: 9999 }) }}
+        menuPosition="fixed"
         options={options}
         value={selected}
         onChange={(opt) =>

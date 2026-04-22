@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { useGetProforma, createInvoice, updateProforma } from "@workspace/api-client-react";
+import { useGetProforma, createInvoice, updateProforma, deleteProforma } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PrintDocument } from "@/components/print/PrintDocument";
-import { ArrowLeft, Printer, FileSignature, Send, CheckCircle, XCircle, RotateCcw } from "lucide-react";
+import { ArrowLeft, Printer, FileSignature, Send, CheckCircle, XCircle, RotateCcw, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useCurrency } from "@/hooks/use-currency";
+import { useToast } from "@/hooks/use-toast";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Brouillon",
@@ -30,11 +35,13 @@ export default function ProformaDetail() {
   const { id } = useParams();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: proforma, isLoading } = useGetProforma(Number(id), {
     query: { enabled: !!id, queryKey: ["proforma", id] },
   });
   const [showPrint, setShowPrint] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const changeStatus = useMutation({
     mutationFn: (status: string) => updateProforma(Number(id), { status }),
@@ -42,6 +49,16 @@ export default function ProformaDetail() {
       queryClient.invalidateQueries({ queryKey: ["proforma", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/proformas"] });
     },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteProforma(Number(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/proformas"] });
+      toast({ title: "Proforma supprimée" });
+      navigate("/billing/proformas");
+    },
+    onError: (e: Error) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
   });
 
   const { formatCurrency, amountInWords, currency } = useCurrency(proforma?.currency);
@@ -145,6 +162,16 @@ export default function ProformaDetail() {
             <Button variant="outline" onClick={() => setShowPrint(true)}>
               <Printer className="w-4 h-4 mr-2" /> Imprimer
             </Button>
+            {status === "draft" && (
+              <Button
+                variant="outline"
+                className="border-destructive text-destructive hover:bg-destructive/10"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={busy || deleteMutation.isPending}
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+              </Button>
+            )}
             <Button onClick={handleConvertToInvoice} disabled={busy}>
               <FileSignature className="w-4 h-4 mr-2" />
               {converting ? "Conversion…" : "→ Facture"}
@@ -259,6 +286,26 @@ export default function ProformaDetail() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette proforma ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La proforma {proforma.proformaNumber} sera définitivement supprimée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => deleteMutation.mutate()}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {showPrint && (
         <PrintDocument
