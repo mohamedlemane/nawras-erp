@@ -64,9 +64,9 @@ function StatCard({ title, value, sub, icon: Icon, color }: {
 }
 
 interface Filters {
-  from: string; to: string; status: string; type: string; currency: string; year: string; month: string;
+  from: string; to: string; status: string; type: string; serviceType: string; currency: string; year: string; month: string;
 }
-const EMPTY: Filters = { from: "", to: "", status: "", type: "", currency: "", year: "", month: "" };
+const EMPTY: Filters = { from: "", to: "", status: "", type: "", serviceType: "", currency: "", year: "", month: "" };
 
 export default function ConsultationsStats() {
   const [filters, setFilters] = useState<Filters>(EMPTY);
@@ -102,6 +102,7 @@ export default function ConsultationsStats() {
     if (applied.to) p.set("to", applied.to);
     if (applied.status) p.set("status", applied.status);
     if (applied.type) p.set("type", applied.type);
+    if (applied.serviceType) p.set("serviceType", applied.serviceType);
     if (applied.currency) p.set("currency", applied.currency);
     if (applied.year) p.set("year", applied.year);
     if (applied.month) p.set("month", applied.month);
@@ -213,7 +214,7 @@ export default function ConsultationsStats() {
                 </div>
                 <div>
                   <Label className="text-xs">Type de prestation</Label>
-                  <Select value={filters.type || "_all"} onValueChange={v => setFilters(f => ({ ...f, type: v === "_all" ? "" : v }))}>
+                  <Select value={filters.serviceType || "_all"} onValueChange={v => setFilters(f => ({ ...f, serviceType: v === "_all" ? "" : v }))}>
                     <SelectTrigger><SelectValue placeholder="Tous" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_all">Toutes les prestations</SelectItem>

@@ -36,13 +36,14 @@ router.get("/consultations/stats", requirePermission("view_consultations"), asyn
   const cid = getCid(req);
   if (!cid) { res.json({ summary: {}, byStatus: [], byType: [], byServiceType: [], byCurrency: [], byCountry: [], byCity: [], byMonth: [], byYear: [] }); return; }
 
-  const { from, to, status, type, currency, year, month } = req.query;
+  const { from, to, status, type, serviceType, currency, year, month } = req.query;
 
   const conds: any[] = [eq(consultationsTable.companyId, cid)];
   if (from) conds.push(gte(consultationsTable.receivedAt, new Date(String(from))));
   if (to) conds.push(lte(consultationsTable.receivedAt, new Date(String(to))));
   if (status) conds.push(eq(consultationsTable.status, String(status)));
   if (type) conds.push(eq(consultationsTable.type, String(type)));
+  if (serviceType) conds.push(sql`${consultationsTable.serviceTypes}::jsonb @> ${JSON.stringify([String(serviceType)])}::jsonb`);
   if (currency) conds.push(eq(consultationsTable.currency, String(currency)));
   if (year) conds.push(sql`EXTRACT(YEAR FROM ${consultationsTable.receivedAt})::int = ${parseInt(String(year), 10)}`);
   if (month) conds.push(sql`EXTRACT(MONTH FROM ${consultationsTable.receivedAt})::int = ${parseInt(String(month), 10)}`);
