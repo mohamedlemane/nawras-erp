@@ -197,7 +197,7 @@ export default function Dashboard() {
             value={projectsStats?.total ?? "—"}
             icon={FolderKanban}
             color="text-blue-600"
-            href="/projects"
+            href="/projects/list"
           />
           <StatCard
             title="Projets Actifs"
@@ -205,7 +205,7 @@ export default function Dashboard() {
             icon={TrendingUp}
             color="text-green-600"
             sub="Mobilisation + En cours"
-            href="/projects"
+            href="/projects/list"
           />
           <StatCard
             title="En Achèvement"
@@ -213,7 +213,7 @@ export default function Dashboard() {
             icon={CheckCircle2}
             color="text-violet-600"
             sub="Phase finale"
-            href="/projects"
+            href="/projects/list"
           />
           <StatCard
             title="Non Facturés"
@@ -221,7 +221,7 @@ export default function Dashboard() {
             icon={BarChart3}
             color="text-amber-600"
             sub="Projets livrés sans facture"
-            href="/projects"
+            href="/projects/list"
           />
         </div>
       </section>
