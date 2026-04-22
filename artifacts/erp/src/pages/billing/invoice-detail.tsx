@@ -9,7 +9,6 @@ import { PrintDocument } from "@/components/print/PrintDocument";
 import { ArrowLeft, CheckCircle, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { useCurrency } from "@/hooks/use-currency";
-import { getCurrency } from "@/lib/currencies";
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -154,9 +153,9 @@ export default function InvoiceDetail() {
                 <div>
                   <span className="text-sm text-muted-foreground">Monnaie</span>
                   <p className="font-medium flex items-center gap-1.5 mt-0.5">
-                    <span className="text-base">{getCurrency(invoice.currency).flag}</span>
-                    <span>{getCurrency(invoice.currency).code}</span>
-                    <span className="text-xs text-muted-foreground">— {getCurrency(invoice.currency).label}</span>
+                    <span className="text-base">{currency.flag}</span>
+                    <span>{currency.code}</span>
+                    <span className="text-xs text-muted-foreground">— {currency.label}</span>
                   </p>
                 </div>
                 {invoice.subject && (

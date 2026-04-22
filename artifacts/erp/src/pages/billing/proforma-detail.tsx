@@ -9,7 +9,6 @@ import { PrintDocument } from "@/components/print/PrintDocument";
 import { ArrowLeft, Printer, FileSignature, Send, CheckCircle, XCircle, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { useCurrency } from "@/hooks/use-currency";
-import { getCurrency } from "@/lib/currencies";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Brouillon",
@@ -238,9 +237,9 @@ export default function ProformaDetail() {
                 <div>
                   <span className="text-sm text-muted-foreground">Monnaie</span>
                   <p className="font-medium flex items-center gap-1.5 mt-0.5">
-                    <span className="text-base">{getCurrency(proforma.currency).flag}</span>
-                    <span>{getCurrency(proforma.currency).code}</span>
-                    <span className="text-xs text-muted-foreground">— {getCurrency(proforma.currency).label}</span>
+                    <span className="text-base">{currency.flag}</span>
+                    <span>{currency.code}</span>
+                    <span className="text-xs text-muted-foreground">— {currency.label}</span>
                   </p>
                 </div>
                 {proforma.subject && (
