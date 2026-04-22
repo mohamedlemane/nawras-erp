@@ -386,6 +386,7 @@ export default function QuoteDetail() {
           subtotal={quote.subtotal}
           taxAmount={quote.taxAmount}
           total={quote.total}
+          currency={quote.currency}
           onClose={() => setShowPrint(false)}
         />
       )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatAmount } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/use-currency";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { useParams, useLocation, Link } from "wouter";
@@ -80,7 +81,7 @@ export default function QuoteEdit() {
     onError: (err) => handleApiError(err, "Échec de la mise à jour"),
   });
 
-  const { formatCurrency } = useCurrency();
+  const { currency: defaultCurrency } = useCurrency();
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   if (!quote) return <div className="p-8 text-center text-muted-foreground">Devis introuvable</div>;
@@ -122,7 +123,7 @@ export default function QuoteEdit() {
       </div>
 
       <form
-        onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(form); }}
+        onSubmit={(e) => { e.preventDefault(); saveMutation.mutate({ ...form, currency: form.currency ?? defaultCurrency.code }); }}
         className="space-y-6"
       >
         <Card>
@@ -235,7 +236,7 @@ export default function QuoteEdit() {
                 <Button type="button" variant="ghost" size="sm" onClick={addItem}>
                   <Plus className="w-3.5 h-3.5 mr-1" /> Ajouter une ligne
                 </Button>
-                <span className="text-sm font-semibold">Total : {formatCurrency(total)}</span>
+                <span className="text-sm font-semibold">Total : {formatAmount(total, form.currency ?? defaultCurrency.code)}</span>
               </div>
             </div>
           </CardContent>

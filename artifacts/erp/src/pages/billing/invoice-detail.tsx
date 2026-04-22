@@ -189,6 +189,7 @@ export default function InvoiceDetail() {
           subtotal={invoice.subtotal}
           taxAmount={invoice.taxAmount}
           total={invoice.total}
+          currency={invoice.currency}
           onClose={() => setShowPrint(false)}
         />
       )}

@@ -272,6 +272,7 @@ export default function ProformaDetail() {
           subtotal={proforma.subtotal}
           taxAmount={proforma.taxAmount}
           total={proforma.total}
+          currency={proforma.currency}
           onClose={() => setShowPrint(false)}
         />
       )}

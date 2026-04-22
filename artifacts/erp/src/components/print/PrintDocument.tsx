@@ -21,16 +21,17 @@ interface PrintDocumentProps {
   subtotal: number;
   taxAmount: number;
   total: number;
+  currency?: string | null;
   onClose: () => void;
 }
 
 export function PrintDocument({
   docType, docNumber, issueDate, validUntil, dueDate,
-  partnerName, subject, notes, items, subtotal, taxAmount, total, onClose,
+  partnerName, subject, notes, items, subtotal, taxAmount, total, currency: docCurrency, onClose,
 }: PrintDocumentProps) {
   const { data: company } = useGetMyCompany();
   const printRef = useRef<HTMLDivElement>(null);
-  const currency = getCurrency(company?.currency);
+  const currency = getCurrency(docCurrency ?? company?.currency);
   const fmt = (val: number) =>
     new Intl.NumberFormat(currency.locale, { minimumFractionDigits: currency.decimals, maximumFractionDigits: currency.decimals }).format(val);
 
