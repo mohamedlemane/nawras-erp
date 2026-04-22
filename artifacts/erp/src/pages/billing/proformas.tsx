@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatAmount } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/use-currency";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import ReactSelect from "react-select";
@@ -70,7 +71,7 @@ export default function ProformasList() {
   const addItem = () => setForm(f => ({ ...f, items: [...f.items, emptyItem()] }));
   const removeItem = (idx: number) => setForm(f => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
   const calcTotal = () => form.items.reduce((acc, it) => acc + it.quantity * it.unitPrice * (1 + (it.taxRate ?? 0) / 100), 0);
-  const { formatCurrency, currency: defaultCurrency } = useCurrency();
+  const { currency: defaultCurrency } = useCurrency();
 
   return (
     <div className="space-y-6">
@@ -113,7 +114,7 @@ export default function ProformasList() {
                   <TableCell className="font-medium font-mono">{proforma.proformaNumber}</TableCell>
                   <TableCell>{proforma.partnerName || '-'}</TableCell>
                   <TableCell>{format(new Date(proforma.issueDate), 'dd/MM/yyyy')}</TableCell>
-                  <TableCell className="text-right font-medium">{formatCurrency(proforma.total)}</TableCell>
+                  <TableCell className="text-right font-medium">{formatAmount(proforma.total, proforma.currency)}</TableCell>
                   <TableCell><span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColors[proforma.status] || 'bg-gray-100 text-gray-700'}`}>{statusLabels[proforma.status] || proforma.status}</span></TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" asChild>
@@ -202,7 +203,7 @@ export default function ProformasList() {
               </table>
               <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-t">
                 <Button type="button" variant="ghost" size="sm" onClick={addItem}><Plus className="w-3.5 h-3.5 mr-1" /> Ajouter une ligne</Button>
-                <span className="text-sm font-semibold">Total : {formatCurrency(calcTotal())}</span>
+                <span className="text-sm font-semibold">Total : {formatAmount(calcTotal(), form.currency ?? defaultCurrency.code)}</span>
               </div>
             </div>
             <div><Label>Notes</Label><Textarea value={form.notes ?? ""} onChange={e => setForm(f => ({ ...f, notes: e.target.value || null }))} rows={2} /></div>

@@ -165,3 +165,19 @@ export function getCurrency(code?: string | null): CurrencyDef {
   if (!code) return DEFAULT_CURRENCY;
   return CURRENCIES.find((c) => c.code.toUpperCase() === code.toUpperCase()) ?? DEFAULT_CURRENCY;
 }
+
+export function formatAmount(value: number | string | null | undefined, code?: string | null): string {
+  const currency = getCurrency(code);
+  const n = typeof value === "string" ? Number(value) : (value ?? 0);
+  if (!Number.isFinite(n)) return `0 ${currency.symbol}`;
+  try {
+    return new Intl.NumberFormat(currency.locale, {
+      style: "currency",
+      currency: currency.code,
+      minimumFractionDigits: currency.decimals,
+      maximumFractionDigits: currency.decimals,
+    }).format(n);
+  } catch {
+    return `${n.toLocaleString("fr-FR", { minimumFractionDigits: currency.decimals, maximumFractionDigits: currency.decimals })} ${currency.symbol}`;
+  }
+}
