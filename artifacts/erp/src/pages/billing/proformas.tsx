@@ -51,7 +51,7 @@ export default function ProformasList() {
   });
 
   const openCreate = () => {
-    setForm({ partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'), validUntil: null, currency: null, notes: null, items: [emptyItem()] });
+    setForm({ partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'), validUntil: null, currency: defaultCurrency.code, notes: null, items: [emptyItem()] });
     setSheetOpen(true);
   };
 
@@ -70,7 +70,7 @@ export default function ProformasList() {
   const addItem = () => setForm(f => ({ ...f, items: [...f.items, emptyItem()] }));
   const removeItem = (idx: number) => setForm(f => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
   const calcTotal = () => form.items.reduce((acc, it) => acc + it.quantity * it.unitPrice * (1 + (it.taxRate ?? 0) / 100), 0);
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currency: defaultCurrency } = useCurrency();
 
   return (
     <div className="space-y-6">
@@ -134,7 +134,7 @@ export default function ProformasList() {
           onInteractOutside={(e) => e.preventDefault()}
         >
           <SheetHeader><SheetTitle>Nouvelle proforma</SheetTitle></SheetHeader>
-          <form onSubmit={e => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-4 mt-4">
+          <form onSubmit={e => { e.preventDefault(); createMutation.mutate({ ...form, currency: form.currency ?? defaultCurrency.code }); }} className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Client</Label>
