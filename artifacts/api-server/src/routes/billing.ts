@@ -100,7 +100,7 @@ router.patch("/quotes/:id", requireAuth, async (req: Request, res: Response): Pr
 
   const isStatusOnlyChange = status !== undefined
     && partnerId === undefined && subject === undefined && issueDate === undefined
-    && validUntil === undefined && notes === undefined && (!items || items.length === 0);
+    && validUntil === undefined && currency === undefined && notes === undefined && (!items || items.length === 0);
 
   if (!isStatusOnlyChange && QUOTE_LOCKED_STATUSES.has(existing.status)) {
     res.status(409).json({

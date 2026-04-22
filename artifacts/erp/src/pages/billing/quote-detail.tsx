@@ -10,6 +10,7 @@ import { PrintDocument } from "@/components/print/PrintDocument";
 import { ArrowLeft, Printer, FileCheck, FileSignature, Send, CheckCircle, XCircle, RotateCcw, Trash2, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { useCurrency } from "@/hooks/use-currency";
+import { getCurrency } from "@/lib/currencies";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -325,6 +326,14 @@ export default function QuoteDetail() {
                       {STATUS_LABELS[status] ?? status}
                     </span>
                   </div>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Monnaie</span>
+                  <p className="font-medium flex items-center gap-1.5 mt-0.5">
+                    <span className="text-base">{getCurrency(quote.currency).flag}</span>
+                    <span>{getCurrency(quote.currency).code}</span>
+                    <span className="text-xs text-muted-foreground">— {getCurrency(quote.currency).label}</span>
+                  </p>
                 </div>
                 {quote.subject && (
                   <div>
