@@ -13,6 +13,7 @@ import PartnerDetail from "@/pages/billing/partner-detail";
 import Products from "@/pages/billing/products";
 import Quotes from "@/pages/billing/quotes";
 import QuoteDetail from "@/pages/billing/quote-detail";
+import QuoteEdit from "@/pages/billing/quote-edit";
 import Proformas from "@/pages/billing/proformas";
 import ProformaDetail from "@/pages/billing/proforma-detail";
 import Invoices from "@/pages/billing/invoices";
@@ -69,6 +70,7 @@ function AppRouter() {
             <Route path="/billing/partners/:id" component={PartnerDetail} />
             <Route path="/billing/products" component={Products} />
             <Route path="/billing/quotes" component={Quotes} />
+            <Route path="/billing/quotes/:id/edit" component={QuoteEdit} />
             <Route path="/billing/quotes/:id" component={QuoteDetail} />
             <Route path="/billing/proformas" component={Proformas} />
             <Route path="/billing/proformas/:id" component={ProformaDetail} />

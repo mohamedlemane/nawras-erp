@@ -3,6 +3,13 @@ import { and, eq, ilike, sql } from "drizzle-orm";
 import { db, quotesTable, quoteItemsTable, proformasTable, proformaItemsTable, invoicesTable, invoiceItemsTable, paymentsTable, partnersTable } from "@workspace/db";
 import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
 import { createAuditLog } from "../lib/audit";
+import { handleDbError } from "../lib/db-errors";
+
+const QUOTE_LOCKED_STATUSES = new Set(["sent", "accepted", "refused", "rejected", "converted", "expired"]);
+const QUOTE_STATUS_LABELS: Record<string, string> = {
+  draft: "brouillon", sent: "envoyé", accepted: "accepté", refused: "refusé",
+  rejected: "refusé", converted: "converti", expired: "expiré",
+};
 
 const router: IRouter = Router();
 
@@ -88,6 +95,21 @@ router.patch("/quotes/:id", requireAuth, async (req: Request, res: Response): Pr
   const id = parseInt(raw, 10);
   const { partnerId, subject, issueDate, validUntil, notes, status, items } = req.body;
 
+  const [existing] = await db.select().from(quotesTable).where(and(eq(quotesTable.id, id), eq(quotesTable.companyId, info.companyId))).limit(1);
+  if (!existing) { res.status(404).json({ error: "Devis introuvable" }); return; }
+
+  const isStatusOnlyChange = status !== undefined
+    && partnerId === undefined && subject === undefined && issueDate === undefined
+    && validUntil === undefined && notes === undefined && (!items || items.length === 0);
+
+  if (!isStatusOnlyChange && QUOTE_LOCKED_STATUSES.has(existing.status)) {
+    res.status(409).json({
+      error: `Ce devis ne peut plus être modifié car il est ${QUOTE_STATUS_LABELS[existing.status] ?? existing.status}. Seuls les devis en brouillon sont modifiables.`,
+      code: "QUOTE_LOCKED",
+    });
+    return;
+  }
+
   let updates: any = { updatedBy: req.user.id };
   if (partnerId !== undefined) updates.partnerId = partnerId;
   if (subject !== undefined) updates.subject = subject;
@@ -108,7 +130,7 @@ router.patch("/quotes/:id", requireAuth, async (req: Request, res: Response): Pr
   }
 
   const [quote] = await db.update(quotesTable).set(updates).where(and(eq(quotesTable.id, id), eq(quotesTable.companyId, info.companyId))).returning();
-  if (!quote) { res.status(404).json({ error: "Quote not found" }); return; }
+  if (!quote) { res.status(404).json({ error: "Devis introuvable" }); return; }
   res.json({ ...serDoc(quote), partnerName: null });
 });
 
@@ -119,8 +141,24 @@ router.delete("/quotes/:id", requireAuth, async (req: Request, res: Response): P
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  await db.delete(quotesTable).where(and(eq(quotesTable.id, id), eq(quotesTable.companyId, info.companyId)));
-  res.sendStatus(204);
+
+  const [existing] = await db.select({ status: quotesTable.status }).from(quotesTable).where(and(eq(quotesTable.id, id), eq(quotesTable.companyId, info.companyId))).limit(1);
+  if (!existing) { res.status(404).json({ error: "Devis introuvable" }); return; }
+
+  if (QUOTE_LOCKED_STATUSES.has(existing.status)) {
+    res.status(409).json({
+      error: `Impossible de supprimer ce devis car il est ${QUOTE_STATUS_LABELS[existing.status] ?? existing.status}. Seuls les devis en brouillon peuvent être supprimés.`,
+      code: "QUOTE_LOCKED",
+    });
+    return;
+  }
+
+  try {
+    await db.delete(quotesTable).where(and(eq(quotesTable.id, id), eq(quotesTable.companyId, info.companyId)));
+    res.sendStatus(204);
+  } catch (err) {
+    if (!handleDbError(err, res, "quote")) throw err;
+  }
 });
 
 // ── PROFORMAS ─────────────────────────────────────────────────────────────────

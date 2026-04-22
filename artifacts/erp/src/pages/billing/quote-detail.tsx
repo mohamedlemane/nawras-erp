@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { useGetQuote, createInvoice, createProforma, updateQuote } from "@workspace/api-client-react";
+import { useGetQuote, createInvoice, createProforma, updateQuote, deleteQuote } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PrintDocument } from "@/components/print/PrintDocument";
-import { ArrowLeft, Printer, FileCheck, FileSignature, Send, CheckCircle, XCircle, RotateCcw } from "lucide-react";
+import { ArrowLeft, Printer, FileCheck, FileSignature, Send, CheckCircle, XCircle, RotateCcw, Trash2, Pencil } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Brouillon",
@@ -30,11 +35,23 @@ export default function QuoteDetail() {
   const { id } = useParams();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: quote, isLoading } = useGetQuote(Number(id), {
     query: { enabled: !!id, queryKey: ["quote", id] },
   });
   const [showPrint, setShowPrint] = useState(false);
   const [converting, setConverting] = useState<"invoice" | "proforma" | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const handleApiError = async (err: unknown, fallback: string) => {
+    let message = fallback;
+    if (err instanceof Response) {
+      try { const j = await err.json(); if (j?.error) message = j.error; } catch { /* ignore */ }
+    } else if (err instanceof Error) {
+      message = err.message;
+    }
+    toast({ title: "Erreur", description: message, variant: "destructive" });
+  };
 
   const changeStatus = useMutation({
     mutationFn: (status: string) => updateQuote(Number(id), { status }),
@@ -42,6 +59,17 @@ export default function QuoteDetail() {
       queryClient.invalidateQueries({ queryKey: ["quote", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
     },
+    onError: (err) => handleApiError(err, "Impossible de changer le statut"),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: () => deleteQuote(Number(id)),
+    onSuccess: () => {
+      toast({ title: "Devis supprimé" });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      navigate("/billing/quotes");
+    },
+    onError: (err) => handleApiError(err, "Suppression impossible"),
   });
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
@@ -66,8 +94,14 @@ export default function QuoteDetail() {
           taxRate: item.taxRate,
         })),
       });
+      if (quote.status === "draft" || quote.status === "sent") {
+        try { await updateQuote(Number(id), { status: "accepted" }); } catch { /* non bloquant */ }
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       navigate(`/billing/invoices/${invoice.id}`);
+    } catch (err) {
+      handleApiError(err, "Conversion en facture impossible");
     } finally {
       setConverting(null);
     }
@@ -89,15 +123,22 @@ export default function QuoteDetail() {
           taxRate: item.taxRate,
         })),
       });
+      if (quote.status === "draft" || quote.status === "sent") {
+        try { await updateQuote(Number(id), { status: "accepted" }); } catch { /* non bloquant */ }
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/proformas"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       navigate(`/billing/proformas/${proforma.id}`);
+    } catch (err) {
+      handleApiError(err, "Conversion en proforma impossible");
     } finally {
       setConverting(null);
     }
   };
 
   const status = quote.status;
-  const busy = changeStatus.isPending || converting !== null;
+  const busy = changeStatus.isPending || converting !== null || removeMutation.isPending;
+  const isDraft = status === "draft";
 
   return (
     <>
@@ -166,6 +207,23 @@ export default function QuoteDetail() {
               </Button>
             )}
 
+            {isDraft && (
+              <>
+                <Button variant="outline" asChild>
+                  <Link href={`/billing/quotes/${id}/edit`}>
+                    <Pencil className="w-4 h-4 mr-2" /> Modifier
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-red-300 text-red-700 hover:bg-red-50"
+                  onClick={() => setDeleteOpen(true)}
+                  disabled={busy}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+                </Button>
+              </>
+            )}
             <Button variant="outline" onClick={() => setShowPrint(true)}>
               <Printer className="w-4 h-4 mr-2" /> Imprimer
             </Button>
@@ -279,6 +337,27 @@ export default function QuoteDetail() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce devis&nbsp;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Le devis {quote.quoteNumber} sera définitivement supprimé. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removeMutation.isPending}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); removeMutation.mutate(); }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={removeMutation.isPending}
+            >
+              {removeMutation.isPending ? "Suppression…" : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {showPrint && (
         <PrintDocument

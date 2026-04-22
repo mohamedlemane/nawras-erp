@@ -1,7 +1,11 @@
 import { useState } from "react";
 import ReactSelect from "react-select";
 import { rsClassNames, rsClassNamesCompact, rsPortalStyles } from "@/lib/rs-styles";
-import { useListQuotes, useListPartners, useListProducts, createQuote } from "@workspace/api-client-react";
+import { useListQuotes, useListPartners, useListProducts, createQuote, deleteQuote } from "@workspace/api-client-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { CreateQuoteBody, DocumentItemInput } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -42,10 +46,28 @@ export default function QuotesList() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
 
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; number: string } | null>(null);
+
+  const handleApiError = async (err: unknown, fallback: string) => {
+    let message = fallback;
+    if (err instanceof Response) {
+      try { const j = await err.json(); if (j?.error) message = j.error; } catch { /* ignore */ }
+    } else if (err instanceof Error) {
+      message = err.message;
+    }
+    toast({ title: "Erreur", description: message, variant: "destructive" });
+  };
+
   const createMutation = useMutation({
     mutationFn: (data: CreateQuoteBody) => createQuote(data),
     onSuccess: () => { invalidate(); setSheetOpen(false); toast({ title: "Devis créé" }); },
-    onError: (e: Error) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
+    onError: (err) => handleApiError(err, "Création impossible"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteQuote(id),
+    onSuccess: () => { invalidate(); setPendingDelete(null); toast({ title: "Devis supprimé" }); },
+    onError: (err) => handleApiError(err, "Suppression impossible"),
   });
 
   const openCreate = () => {
@@ -127,6 +149,17 @@ export default function QuotesList() {
                     <Button variant="ghost" size="icon" asChild>
                       <Link href={`/billing/quotes/${quote.id}`}><Eye className="w-4 h-4" /></Link>
                     </Button>
+                    {quote.status === "draft" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setPendingDelete({ id: quote.id, number: quote.quoteNumber })}
+                        title="Supprimer le devis"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -218,6 +251,27 @@ export default function QuotesList() {
           </form>
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce devis&nbsp;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Le devis {pendingDelete?.number} sera définitivement supprimé. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); if (pendingDelete) deleteMutation.mutate(pendingDelete.id); }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Suppression…" : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
