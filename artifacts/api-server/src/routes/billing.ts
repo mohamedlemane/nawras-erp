@@ -422,7 +422,11 @@ router.get("/payments", requireAuth, async (req: Request, res: Response): Promis
     amount: paymentsTable.amount, paymentDate: paymentsTable.paymentDate, paymentMethod: paymentsTable.paymentMethod,
     reference: paymentsTable.reference, notes: paymentsTable.notes, createdBy: paymentsTable.createdBy, createdAt: paymentsTable.createdAt,
     invoiceNumber: invoicesTable.invoiceNumber, invoiceCurrency: invoicesTable.currency,
-  }).from(paymentsTable).leftJoin(invoicesTable, eq(paymentsTable.invoiceId, invoicesTable.id)).where(whereClause).limit(limit).offset(offset).orderBy(paymentsTable.paymentDate);
+    invoiceAmountDue: invoicesTable.amountDue, invoicePartnerName: partnersTable.name,
+  }).from(paymentsTable)
+    .leftJoin(invoicesTable, eq(paymentsTable.invoiceId, invoicesTable.id))
+    .leftJoin(partnersTable, eq(invoicesTable.partnerId, partnersTable.id))
+    .where(whereClause).limit(limit).offset(offset).orderBy(paymentsTable.paymentDate);
   const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(paymentsTable).where(whereClause);
   res.json({ data: data.map(serPayment), total: count, page, limit });
 });
@@ -457,6 +461,70 @@ router.post("/payments", requireAuth, async (req: Request, res: Response): Promi
   await db.update(invoicesTable).set({ amountPaid: String(newAmountPaid), amountDue: String(newAmountDue), status: newStatus }).where(eq(invoicesTable.id, invoiceId));
 
   res.status(201).json(serPayment(payment!));
+});
+
+router.patch("/payments/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const info = await getUserCompanyInfo(req.user.id);
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const [existing] = await db.select().from(paymentsTable).where(and(eq(paymentsTable.id, id), eq(paymentsTable.companyId, info.companyId))).limit(1);
+  if (!existing) { res.status(404).json({ error: "Paiement introuvable" }); return; }
+
+  const [invoice] = await db.select().from(invoicesTable).where(and(eq(invoicesTable.id, existing.invoiceId), eq(invoicesTable.companyId, info.companyId))).limit(1);
+  if (!invoice) { res.status(404).json({ error: "Facture introuvable" }); return; }
+
+  const { amount, paymentDate, paymentMethod, reference, notes } = req.body;
+  const newAmount = amount !== undefined ? Number(amount) : Number(existing.amount);
+  const oldAmount = Number(existing.amount);
+  const maxAllowed = Number(invoice.amountDue) + oldAmount;
+
+  if (newAmount <= 0) { res.status(400).json({ error: "Le montant doit être supérieur à 0" }); return; }
+  if (newAmount > maxAllowed) {
+    const cur = invoice.currency ?? "MRU";
+    res.status(400).json({ error: `Le montant (${newAmount.toFixed(2)} ${cur}) dépasse le maximum autorisé (${maxAllowed.toFixed(2)} ${cur})` });
+    return;
+  }
+
+  const updates: Record<string, any> = {};
+  if (amount !== undefined) updates.amount = String(newAmount);
+  if (paymentDate !== undefined) updates.paymentDate = new Date(paymentDate);
+  if (paymentMethod !== undefined) updates.paymentMethod = paymentMethod;
+  if (reference !== undefined) updates.reference = reference;
+  if (notes !== undefined) updates.notes = notes;
+
+  const [updated] = await db.update(paymentsTable).set(updates).where(eq(paymentsTable.id, id)).returning();
+
+  const newAmountPaid = Number(invoice.amountPaid) - oldAmount + newAmount;
+  const newAmountDue = Math.max(0, Number(invoice.total) - newAmountPaid);
+  const newStatus = newAmountDue <= 0 ? "paid" : newAmountPaid > 0 ? "partially_paid" : "validated";
+  await db.update(invoicesTable).set({ amountPaid: String(newAmountPaid), amountDue: String(newAmountDue), status: newStatus }).where(eq(invoicesTable.id, invoice.id));
+
+  res.json(serPayment(updated));
+});
+
+router.delete("/payments/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const info = await getUserCompanyInfo(req.user.id);
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const [existing] = await db.select().from(paymentsTable).where(and(eq(paymentsTable.id, id), eq(paymentsTable.companyId, info.companyId))).limit(1);
+  if (!existing) { res.status(404).json({ error: "Paiement introuvable" }); return; }
+
+  const [invoice] = await db.select().from(invoicesTable).where(and(eq(invoicesTable.id, existing.invoiceId), eq(invoicesTable.companyId, info.companyId))).limit(1);
+
+  await db.delete(paymentsTable).where(eq(paymentsTable.id, id));
+
+  if (invoice) {
+    const newAmountPaid = Math.max(0, Number(invoice.amountPaid) - Number(existing.amount));
+    const newAmountDue = Math.max(0, Number(invoice.total) - newAmountPaid);
+    const newStatus = newAmountDue <= 0 ? "paid" : newAmountPaid > 0 ? "partially_paid" : "validated";
+    await db.update(invoicesTable).set({ amountPaid: String(newAmountPaid), amountDue: String(newAmountDue), status: newStatus }).where(eq(invoicesTable.id, invoice.id));
+  }
+
+  res.sendStatus(204);
 });
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
