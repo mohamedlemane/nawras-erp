@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PrintDocument } from "@/components/print/PrintDocument";
-import { ArrowLeft, CheckCircle, Printer, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Printer, Trash2, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { useCurrency } from "@/hooks/use-currency";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ export default function InvoiceDetail() {
   const { data: invoice, isLoading } = useGetInvoice(Number(id), { query: { enabled: !!id, queryKey: ["invoice", id] } });
   const [showPrint, setShowPrint] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showUnvalidateConfirm, setShowUnvalidateConfirm] = useState(false);
 
   const validateInvoice = useValidateInvoice({
     mutation: {
@@ -40,6 +41,25 @@ export default function InvoiceDetail() {
       navigate("/billing/invoices");
     },
     onError: (e: Error) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
+  });
+
+  const unvalidateMutation = useMutation({
+    mutationFn: async () => {
+      const resp = await fetch(`/api/invoices/${id}/unvalidate`, { method: "POST", credentials: "include" });
+      const body = await resp.json();
+      if (!resp.ok) throw new Error(body?.error ?? resp.statusText);
+      return body;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      setShowUnvalidateConfirm(false);
+      toast({ title: "Facture repassée en brouillon" });
+    },
+    onError: (e: Error) => {
+      setShowUnvalidateConfirm(false);
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    },
   });
 
   const { formatCurrency, amountInWords, currency } = useCurrency(invoice?.currency);
@@ -79,6 +99,16 @@ export default function InvoiceDetail() {
                   <Trash2 className="w-4 h-4 mr-2" /> Supprimer
                 </Button>
               </>
+            )}
+            {invoice.status === "validated" && Number(invoice.amountPaid ?? 0) === 0 && (
+              <Button
+                variant="outline"
+                className="border-amber-500 text-amber-700 hover:bg-amber-50"
+                onClick={() => setShowUnvalidateConfirm(true)}
+                disabled={unvalidateMutation.isPending}
+              >
+                <RotateCcw className="w-4 h-4 mr-2" /> Repasser en brouillon
+              </Button>
             )}
             <Button variant="outline" onClick={() => setShowPrint(true)}>
               <Printer className="w-4 h-4 mr-2" /> Imprimer
@@ -219,6 +249,27 @@ export default function InvoiceDetail() {
               onClick={() => deleteMutation.mutate()}
             >
               Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showUnvalidateConfirm} onOpenChange={setShowUnvalidateConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Repasser en brouillon ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La facture <strong>{invoice.invoiceNumber}</strong> sera repassée en statut <em>brouillon</em>.
+              Vous pourrez ensuite la modifier et la revalider. Cette action ne s'applique qu'aux factures sans paiement enregistré.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={() => unvalidateMutation.mutate()}
+            >
+              {unvalidateMutation.isPending ? "En cours..." : "Confirmer"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -401,6 +401,23 @@ router.post("/invoices/:id/validate", requireAuth, async (req: Request, res: Res
   res.json({ ...serInvoice(invoice), partnerName: null });
 });
 
+router.post("/invoices/:id/unvalidate", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const info = await getUserCompanyInfo(req.user.id);
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  const [invoice] = await db.select().from(invoicesTable).where(and(eq(invoicesTable.id, id), eq(invoicesTable.companyId, info.companyId))).limit(1);
+  if (!invoice) { res.status(404).json({ error: "Facture introuvable" }); return; }
+  if (invoice.status !== "validated") { res.status(409).json({ error: "Seules les factures validées (sans paiement) peuvent être repassées en brouillon" }); return; }
+  if (Number(invoice.amountPaid) > 0) { res.status(409).json({ error: "Impossible : des paiements ont déjà été enregistrés sur cette facture" }); return; }
+
+  const [updated] = await db.update(invoicesTable).set({ status: "draft", updatedBy: req.user.id }).where(eq(invoicesTable.id, id)).returning();
+  await createAuditLog({ companyId: info.companyId, userId: req.user.id, action: "unvalidate", entity: "invoice", entityId: String(id) });
+  res.json({ ...serInvoice(updated), partnerName: null });
+});
+
 // ── PAYMENTS ──────────────────────────────────────────────────────────────────
 
 router.get("/payments", requireAuth, async (req: Request, res: Response): Promise<void> => {
