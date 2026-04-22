@@ -32,11 +32,13 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function InvoicesList() {
+  const { currency: defaultCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [formCurrency, setFormCurrency] = useState<string>(defaultCurrency.code);
   const [form, setForm] = useState<CreateInvoiceBody>({
     partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'),
     dueDate: null, currency: null, notes: null, items: [emptyItem()],
@@ -55,7 +57,8 @@ export default function InvoicesList() {
   });
 
   const openCreate = () => {
-    setForm({ partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'), dueDate: null, currency: defaultCurrency.code, notes: null, items: [emptyItem()] });
+    setFormCurrency(defaultCurrency.code);
+    setForm({ partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'), dueDate: null, currency: null, notes: null, items: [emptyItem()] });
     setSheetOpen(true);
   };
 
@@ -74,7 +77,6 @@ export default function InvoicesList() {
   const addItem = () => setForm(f => ({ ...f, items: [...f.items, emptyItem()] }));
   const removeItem = (idx: number) => setForm(f => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
   const calcTotal = () => form.items.reduce((acc, it) => acc + it.quantity * it.unitPrice * (1 + (it.taxRate ?? 0) / 100), 0);
-  const { currency: defaultCurrency } = useCurrency();
 
   return (
     <div className="space-y-6">
@@ -149,7 +151,7 @@ export default function InvoicesList() {
           onInteractOutside={(e) => e.preventDefault()}
         >
           <SheetHeader><SheetTitle>Nouvelle facture</SheetTitle></SheetHeader>
-          <form onSubmit={e => { e.preventDefault(); createMutation.mutate({ ...form, currency: form.currency ?? defaultCurrency.code }); }} className="space-y-4 mt-4">
+          <form onSubmit={e => { e.preventDefault(); createMutation.mutate({ ...form, currency: formCurrency }); }} className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Client</Label>
@@ -170,7 +172,7 @@ export default function InvoicesList() {
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Date d'émission *</Label><Input type="date" value={form.issueDate} onChange={e => setForm(f => ({ ...f, issueDate: e.target.value }))} required /></div>
               <div><Label>Date d'échéance</Label><Input type="date" value={form.dueDate ?? ""} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value || null }))} /></div>
-              <CurrencySelect value={form.currency} onChange={code => setForm(f => ({ ...f, currency: code }))} />
+              <CurrencySelect showDefault={false} value={formCurrency} onChange={code => setFormCurrency(code ?? defaultCurrency.code)} />
             </div>
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-sm">
@@ -209,7 +211,7 @@ export default function InvoicesList() {
               </table>
               <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-t">
                 <Button type="button" variant="ghost" size="sm" onClick={addItem}><Plus className="w-3.5 h-3.5 mr-1" /> Ajouter une ligne</Button>
-                <span className="text-sm font-semibold">Total : {formatAmount(calcTotal(), form.currency ?? defaultCurrency.code)}</span>
+                <span className="text-sm font-semibold">Total : {formatAmount(calcTotal(), formCurrency)}</span>
               </div>
             </div>
             <div><Label>Notes</Label><Textarea value={form.notes ?? ""} onChange={e => setForm(f => ({ ...f, notes: e.target.value || null }))} rows={2} /></div>

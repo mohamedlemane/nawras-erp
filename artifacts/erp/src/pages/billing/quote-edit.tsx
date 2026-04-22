@@ -41,25 +41,6 @@ export default function QuoteEdit() {
     validUntil: null, currency: null, notes: null, items: [emptyItem()],
   });
 
-  useEffect(() => {
-    if (!quote) return;
-    setForm({
-      partnerId: quote.partnerId ?? null,
-      subject: quote.subject ?? null,
-      issueDate: format(new Date(quote.issueDate), "yyyy-MM-dd"),
-      validUntil: quote.validUntil ? format(new Date(quote.validUntil), "yyyy-MM-dd") : null,
-      currency: quote.currency ?? null,
-      notes: quote.notes ?? null,
-      items: (quote.items ?? []).map((it) => ({
-        productId: it.productId ?? null,
-        description: it.description,
-        quantity: it.quantity,
-        unitPrice: it.unitPrice,
-        taxRate: it.taxRate ?? 0,
-      })),
-    });
-  }, [quote]);
-
   const handleApiError = async (err: unknown, fallback: string) => {
     let message = fallback;
     if (err instanceof Response) {
@@ -82,6 +63,28 @@ export default function QuoteEdit() {
   });
 
   const { currency: defaultCurrency } = useCurrency();
+  const [formCurrency, setFormCurrency] = useState<string>(defaultCurrency.code);
+
+  useEffect(() => {
+    if (!quote) return;
+    setFormCurrency(quote.currency ?? defaultCurrency.code);
+    setForm({
+      partnerId: quote.partnerId ?? null,
+      subject: quote.subject ?? null,
+      issueDate: format(new Date(quote.issueDate), "yyyy-MM-dd"),
+      validUntil: quote.validUntil ? format(new Date(quote.validUntil), "yyyy-MM-dd") : null,
+      currency: null,
+      notes: quote.notes ?? null,
+      items: (quote.items ?? []).map((it) => ({
+        productId: it.productId ?? null,
+        description: it.description,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        taxRate: it.taxRate ?? 0,
+      })),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quote]);
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   if (!quote) return <div className="p-8 text-center text-muted-foreground">Devis introuvable</div>;
@@ -123,7 +126,7 @@ export default function QuoteEdit() {
       </div>
 
       <form
-        onSubmit={(e) => { e.preventDefault(); saveMutation.mutate({ ...form, currency: form.currency ?? defaultCurrency.code }); }}
+        onSubmit={(e) => { e.preventDefault(); saveMutation.mutate({ ...form, currency: formCurrency }); }}
         className="space-y-6"
       >
         <Card>
@@ -159,7 +162,7 @@ export default function QuoteEdit() {
                 <Input type="date" value={form.validUntil ?? ""} onChange={(e) => setForm((f) => ({ ...f, validUntil: e.target.value || null }))} />
               </div>
               <div>
-                <CurrencySelect value={form.currency} onChange={(code) => setForm((f) => ({ ...f, currency: code }))} />
+                <CurrencySelect showDefault={false} value={formCurrency} onChange={(code) => setFormCurrency(code ?? defaultCurrency.code)} />
               </div>
             </div>
           </CardContent>
@@ -236,7 +239,7 @@ export default function QuoteEdit() {
                 <Button type="button" variant="ghost" size="sm" onClick={addItem}>
                   <Plus className="w-3.5 h-3.5 mr-1" /> Ajouter une ligne
                 </Button>
-                <span className="text-sm font-semibold">Total : {formatAmount(total, form.currency ?? defaultCurrency.code)}</span>
+                <span className="text-sm font-semibold">Total : {formatAmount(total, formCurrency)}</span>
               </div>
             </div>
           </CardContent>
