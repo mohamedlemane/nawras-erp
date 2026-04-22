@@ -67,5 +67,6 @@ export function numberToWordsMRU(amount: number): string {
   if (decPart === 0) {
     return `${intWords} ${unit} TTC`;
   }
-  return `${intWords} ${unit} ET ${decPart}/100 TTC`;
+  const decWords = convert(decPart).toUpperCase();
+  return `${intWords} VIRGULE ${decWords} ${unit} TTC`;
 }
