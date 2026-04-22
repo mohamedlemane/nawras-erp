@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useGetMyCompany } from "@workspace/api-client-react";
 import type { DocumentItem } from "@workspace/api-client-react";
-import { numberToWordsMRU } from "@/lib/number-to-words";
+import { numberToWords } from "@/lib/number-to-words";
+import { getCurrency } from "@/lib/currencies";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -23,15 +24,15 @@ interface PrintDocumentProps {
   onClose: () => void;
 }
 
-const fmt = (val: number) =>
-  new Intl.NumberFormat("fr-MR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
-
 export function PrintDocument({
   docType, docNumber, issueDate, validUntil, dueDate,
   partnerName, subject, notes, items, subtotal, taxAmount, total, onClose,
 }: PrintDocumentProps) {
   const { data: company } = useGetMyCompany();
   const printRef = useRef<HTMLDivElement>(null);
+  const currency = getCurrency(company?.currency);
+  const fmt = (val: number) =>
+    new Intl.NumberFormat(currency.locale, { minimumFractionDigits: currency.decimals, maximumFractionDigits: currency.decimals }).format(val);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -175,9 +176,9 @@ ${content}
               <tr>
                 <th style={{ background: "#1a56db", color: "white", padding: "7px 8px", fontSize: "9pt", textAlign: "left" }}>Description</th>
                 <th style={{ background: "#1a56db", color: "white", padding: "7px 8px", fontSize: "9pt", textAlign: "right", width: 50 }}>Qté</th>
-                <th style={{ background: "#1a56db", color: "white", padding: "7px 8px", fontSize: "9pt", textAlign: "right", width: 110 }}>P.U. (MRU)</th>
+                <th style={{ background: "#1a56db", color: "white", padding: "7px 8px", fontSize: "9pt", textAlign: "right", width: 110 }}>P.U. ({currency.symbol})</th>
                 <th style={{ background: "#1a56db", color: "white", padding: "7px 8px", fontSize: "9pt", textAlign: "right", width: 60 }}>TVA %</th>
-                <th style={{ background: "#1a56db", color: "white", padding: "7px 8px", fontSize: "9pt", textAlign: "right", width: 110 }}>Total (MRU)</th>
+                <th style={{ background: "#1a56db", color: "white", padding: "7px 8px", fontSize: "9pt", textAlign: "right", width: 110 }}>Total ({currency.symbol})</th>
               </tr>
             </thead>
             <tbody>
@@ -197,13 +198,13 @@ ${content}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
             <div style={{ width: 260 }}>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: "9.5pt", borderBottom: "1px solid #eee" }}>
-                <span>Sous-total HT</span><span>{fmt(subtotal)} MRU</span>
+                <span>Sous-total HT</span><span>{fmt(subtotal)} {currency.symbol}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: "9.5pt", borderBottom: "1px solid #eee" }}>
-                <span>TVA</span><span>{fmt(taxAmount)} MRU</span>
+                <span>TVA</span><span>{fmt(taxAmount)} {currency.symbol}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 4px", fontSize: "13pt", fontWeight: "bold", borderTop: "2px solid #1a56db", color: "#1a56db" }}>
-                <span>TOTAL TTC</span><span>{fmt(total)} MRU</span>
+                <span>TOTAL TTC</span><span>{fmt(total)} {currency.symbol}</span>
               </div>
             </div>
           </div>
@@ -212,7 +213,7 @@ ${content}
           <div style={{ marginTop: 20, background: "#f0f4ff", border: "1px solid #c5d3f5", borderRadius: 5, padding: "12px 16px", fontSize: "9.5pt", lineHeight: 1.7 }}>
             <span style={{ fontWeight: "bold" }}>Arrêté le présent {docType.toLowerCase()} à la somme de :</span><br />
             <span style={{ fontWeight: "bold", textTransform: "uppercase", color: "#1a56db", fontSize: "10pt" }}>
-              {numberToWordsMRU(total)}
+              {numberToWords(total, currency.code)}
             </span>
           </div>
 

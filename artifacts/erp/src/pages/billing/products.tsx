@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import { useListProducts, createProduct, updateProduct, deleteProduct } from "@workspace/api-client-react";
 import type { CreateProductBody, CreateProductBodyType, Product } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -62,7 +63,7 @@ export default function ProductsList() {
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
-  const formatCurrency = (val: number) => new Intl.NumberFormat('fr-MR', { style: 'currency', currency: 'MRU' }).format(val);
+  const { formatCurrency } = useCurrency();
 
   return (
     <div className="space-y-6">

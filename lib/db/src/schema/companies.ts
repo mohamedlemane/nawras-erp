@@ -22,6 +22,7 @@ export const companiesTable = pgTable("companies", {
   ribKey: varchar("rib_key", { length: 5 }),
   rib: varchar("rib", { length: 30 }),
   swiftCode: varchar("swift_code", { length: 20 }),
+  currency: varchar("currency", { length: 10 }).notNull().default("MRU"),
   status: varchar("status", { length: 20 }).notNull().default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

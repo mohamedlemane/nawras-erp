@@ -40,4 +40,6 @@ export interface UpdateCompanyBody {
   rib?: string | null;
   /** @nullable */
   swiftCode?: string | null;
+  /** @nullable */
+  currency?: string | null;
 }

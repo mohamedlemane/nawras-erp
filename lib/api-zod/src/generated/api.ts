@@ -55,6 +55,7 @@ export const ListCompaniesResponseItem = zod.object({
   ribKey: zod.string().nullish(),
   rib: zod.string().nullish(),
   swiftCode: zod.string().nullish(),
+  currency: zod.string().optional(),
   status: zod.string(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -82,6 +83,7 @@ export const CreateCompanyBody = zod.object({
   ribKey: zod.string().nullish(),
   rib: zod.string().nullish(),
   swiftCode: zod.string().nullish(),
+  currency: zod.string().nullish(),
 });
 
 /**
@@ -106,6 +108,7 @@ export const GetMyCompanyResponse = zod.object({
   ribKey: zod.string().nullish(),
   rib: zod.string().nullish(),
   swiftCode: zod.string().nullish(),
+  currency: zod.string().optional(),
   status: zod.string(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -132,6 +135,7 @@ export const UpdateMyCompanyBody = zod.object({
   ribKey: zod.string().nullish(),
   rib: zod.string().nullish(),
   swiftCode: zod.string().nullish(),
+  currency: zod.string().nullish(),
 });
 
 export const UpdateMyCompanyResponse = zod.object({
@@ -153,6 +157,7 @@ export const UpdateMyCompanyResponse = zod.object({
   ribKey: zod.string().nullish(),
   rib: zod.string().nullish(),
   swiftCode: zod.string().nullish(),
+  currency: zod.string().optional(),
   status: zod.string(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -184,6 +189,7 @@ export const GetCompanyResponse = zod.object({
   ribKey: zod.string().nullish(),
   rib: zod.string().nullish(),
   swiftCode: zod.string().nullish(),
+  currency: zod.string().optional(),
   status: zod.string(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -214,6 +220,7 @@ export const UpdateCompanyBody = zod.object({
   ribKey: zod.string().nullish(),
   rib: zod.string().nullish(),
   swiftCode: zod.string().nullish(),
+  currency: zod.string().nullish(),
 });
 
 export const UpdateCompanyResponse = zod.object({
@@ -235,6 +242,7 @@ export const UpdateCompanyResponse = zod.object({
   ribKey: zod.string().nullish(),
   rib: zod.string().nullish(),
   swiftCode: zod.string().nullish(),
+  currency: zod.string().optional(),
   status: zod.string(),
   createdAt: zod.string(),
   updatedAt: zod.string(),

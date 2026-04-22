@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PrintDocument } from "@/components/print/PrintDocument";
 import { ArrowLeft, Printer, FileSignature, Send, CheckCircle, XCircle, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
-import { numberToWordsMRU } from "@/lib/number-to-words";
+import { useCurrency } from "@/hooks/use-currency";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Brouillon",
@@ -47,8 +47,7 @@ export default function ProformaDetail() {
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   if (!proforma) return <div className="p-8 text-center text-muted-foreground">Proforma introuvable</div>;
 
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat("fr-MR", { minimumFractionDigits: 2 }).format(val) + " MRU";
+  const { formatCurrency, amountInWords, currency } = useCurrency();
 
   const handleConvertToInvoice = async () => {
     setConverting(true);
@@ -205,7 +204,7 @@ export default function ProformaDetail() {
               </div>
               <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-relaxed">
                 <span className="font-semibold">Arrêtée la présente facture proforma à la somme de :</span>{" "}
-                <span className="font-bold uppercase text-blue-700">{numberToWordsMRU(proforma.total)}</span>
+                <span className="font-bold uppercase text-blue-700">{amountInWords(proforma.total)}</span>
               </div>
               <div className="hidden">
                 <div>

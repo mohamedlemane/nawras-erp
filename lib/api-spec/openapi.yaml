@@ -1646,6 +1646,8 @@ components:
           type: ["string", "null"]
         swiftCode:
           type: ["string", "null"]
+        currency:
+          type: string
         status:
           type: string
         createdAt:
@@ -1696,6 +1698,8 @@ components:
           type: ["string", "null"]
         swiftCode:
           type: ["string", "null"]
+        currency:
+          type: ["string", "null"]
       required:
         - name
 
@@ -1735,6 +1739,8 @@ components:
         rib:
           type: ["string", "null"]
         swiftCode:
+          type: ["string", "null"]
+        currency:
           type: ["string", "null"]
 
     AppUser:

@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Banknote, MapPin, Upload, Save, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Building2, Banknote, MapPin, Upload, Save, X, Coins } from "lucide-react";
+import { CURRENCIES } from "@/lib/currencies";
 
 export default function CompanySettings() {
   const queryClient = useQueryClient();
@@ -34,6 +36,7 @@ export default function CompanySettings() {
     ribKey: "",
     rib: "",
     swiftCode: "",
+    currency: "MRU",
   });
 
   useEffect(() => {
@@ -56,6 +59,7 @@ export default function CompanySettings() {
         ribKey: company.ribKey ?? "",
         rib: company.rib ?? "",
         swiftCode: company.swiftCode ?? "",
+        currency: company.currency ?? "MRU",
       });
     }
   }, [company]);
@@ -116,6 +120,7 @@ export default function CompanySettings() {
         ribKey: form.ribKey || null,
         rib: form.rib || null,
         swiftCode: form.swiftCode || null,
+        currency: form.currency || "MRU",
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/companies/mine"] });
       setSuccess(true);
@@ -265,6 +270,42 @@ export default function CompanySettings() {
                 <Label htmlFor="country">Pays</Label>
                 <Input id="country" value={form.country} onChange={set("country")} placeholder="Mauritanie" />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Devise / Monnaie */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Coins className="h-4 w-4 text-primary" />
+              Monnaie
+            </CardTitle>
+            <CardDescription>
+              Devise utilisée pour les devis, factures, dépenses et tous les montants affichés dans l'application
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1.5 max-w-md">
+              <Label htmlFor="currency">Devise par défaut</Label>
+              <Select
+                value={form.currency}
+                onValueChange={(value) => { setForm((p) => ({ ...p, currency: value })); setSuccess(false); }}
+              >
+                <SelectTrigger id="currency">
+                  <SelectValue placeholder="Choisir une devise" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      <span className="font-mono mr-2">{c.symbol}</span> {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Le changement s'appliquera immédiatement à l'affichage des montants et au montant en lettres sur les documents.
+              </p>
             </div>
           </CardContent>
         </Card>

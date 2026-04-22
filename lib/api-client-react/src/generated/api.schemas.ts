@@ -65,6 +65,7 @@ export interface Company {
   rib?: string | null;
   /** @nullable */
   swiftCode?: string | null;
+  currency?: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -104,6 +105,8 @@ export interface CreateCompanyBody {
   rib?: string | null;
   /** @nullable */
   swiftCode?: string | null;
+  /** @nullable */
+  currency?: string | null;
 }
 
 export interface UpdateCompanyBody {
@@ -140,6 +143,8 @@ export interface UpdateCompanyBody {
   rib?: string | null;
   /** @nullable */
   swiftCode?: string | null;
+  /** @nullable */
+  currency?: string | null;
 }
 
 export interface AppUser {

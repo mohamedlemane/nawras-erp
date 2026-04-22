@@ -152,10 +152,10 @@ router.patch("/companies/mine", requireAuth, async (req: Request, res: Response)
   if (!info) { res.status(404).json({ error: "No company associated with this user" }); return; }
 
   const { name, subdomain: rawSubdomain, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
-    logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode } = req.body;
+    logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode, currency } = req.body;
 
   const updates: Record<string, any> = { name, legalName, taxNumber, registrationNumber, email, phone, address, city, country,
-    logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode };
+    logo, bankName, bankCode, branchCode, accountNumber, ribKey, rib, swiftCode, currency };
 
   if (rawSubdomain !== undefined) {
     const cleaned = generateSubdomain(rawSubdomain);

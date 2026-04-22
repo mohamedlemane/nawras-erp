@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import ReactSelect from "react-select";
 import { rsClassNames, rsClassNamesCompact, rsPortalStyles } from "@/lib/rs-styles";
 import { useListQuotes, useListPartners, useListProducts, createQuote, deleteQuote } from "@workspace/api-client-react";
@@ -91,7 +92,7 @@ export default function QuotesList() {
   const removeItem = (idx: number) => setForm(f => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
 
   const calcTotal = () => form.items.reduce((acc, it) => acc + it.quantity * it.unitPrice * (1 + (it.taxRate ?? 0) / 100), 0);
-  const formatCurrency = (val: number) => new Intl.NumberFormat('fr-MR', { style: 'currency', currency: 'MRU' }).format(val);
+  const { formatCurrency } = useCurrency();
 
   return (
     <div className="space-y-6">

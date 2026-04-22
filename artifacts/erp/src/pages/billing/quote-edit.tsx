@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import { useParams, useLocation, Link } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import ReactSelect from "react-select";
@@ -103,7 +104,7 @@ export default function QuoteEdit() {
   const removeItem = (idx: number) => setForm((f) => ({ ...f, items: (f.items ?? []).filter((_, i) => i !== idx) }));
 
   const total = items.reduce((acc, it) => acc + it.quantity * it.unitPrice * (1 + (it.taxRate ?? 0) / 100), 0);
-  const formatCurrency = (val: number) => new Intl.NumberFormat("fr-MR", { style: "currency", currency: "MRU" }).format(val);
+  const { formatCurrency } = useCurrency();
 
   return (
     <div className="space-y-6">

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import ReactSelect from "react-select";
 import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 import { useListPayments, useListInvoices, createPayment } from "@workspace/api-client-react";
@@ -120,8 +121,7 @@ export default function PaymentsList() {
     createMutation.mutate(form);
   };
 
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat("fr-MR", { minimumFractionDigits: 2 }).format(val) + " MRU";
+  const { formatCurrency } = useCurrency();
 
   return (
     <div className="space-y-6">

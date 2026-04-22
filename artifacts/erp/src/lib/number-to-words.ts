@@ -1,3 +1,5 @@
+import { getCurrency } from "./currencies";
+
 const ONES = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf",
   "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
 const TENS = ["", "dix", "vingt", "trente", "quarante", "cinquante", "soixante",
@@ -57,16 +59,24 @@ function convert(n: number): string {
   return parts.join(" ");
 }
 
-export function numberToWordsMRU(amount: number): string {
+export function numberToWords(amount: number, currencyCode?: string | null): string {
+  const cur = getCurrency(currencyCode);
   const intPart = Math.floor(amount);
-  const decPart = Math.round((amount - intPart) * 100);
+  const decPart = cur.decimals > 0
+    ? Math.round((amount - intPart) * Math.pow(10, cur.decimals))
+    : 0;
 
   const intWords = convert(intPart).toUpperCase();
-  const unit = intPart > 1 ? "OUGUIYAS" : "OUGUIYA";
+  const unit = intPart > 1 ? cur.unitPlural : cur.unitSingular;
 
   if (decPart === 0) {
     return `${intWords} ${unit} TTC`;
   }
   const decWords = convert(decPart).toUpperCase();
   return `${intWords} VIRGULE ${decWords} ${unit} TTC`;
+}
+
+/** @deprecated use numberToWords(amount, code) instead */
+export function numberToWordsMRU(amount: number): string {
+  return numberToWords(amount, "MRU");
 }

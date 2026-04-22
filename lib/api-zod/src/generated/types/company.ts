@@ -41,6 +41,7 @@ export interface Company {
   rib?: string | null;
   /** @nullable */
   swiftCode?: string | null;
+  currency?: string;
   status: string;
   createdAt: string;
   updatedAt: string;

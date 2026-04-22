@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,8 +97,7 @@ export default function Expenses() {
     queryFn: () => fetch(`${BASE}/api/expenses/summary`, { credentials: "include" }).then(r => r.json()),
   });
 
-  const formatCurrency = (v: number | string) =>
-    new Intl.NumberFormat("fr-MR", { style: "currency", currency: "MRU", maximumFractionDigits: 0 }).format(Number(v));
+  const { formatCurrency } = useCurrency();
 
   const expenses = useMemo(() => {
     let list = data?.data ?? [];

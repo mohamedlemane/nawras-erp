@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCurrency } from "@/hooks/use-currency";
 import ReactSelect from "react-select";
 import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 import { useListContracts, useListEmployees, createContract } from "@workspace/api-client-react";
@@ -48,7 +49,7 @@ export default function ContractsList() {
     createMutation.mutate(form);
   };
 
-  const formatCurrency = (val: number) => new Intl.NumberFormat('fr-MR', { style: 'currency', currency: 'MRU' }).format(val);
+  const { formatCurrency } = useCurrency();
 
   return (
     <div className="space-y-6">

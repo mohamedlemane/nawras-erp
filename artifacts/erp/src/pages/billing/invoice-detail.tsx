@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PrintDocument } from "@/components/print/PrintDocument";
 import { ArrowLeft, CheckCircle, Printer } from "lucide-react";
 import { format } from "date-fns";
-import { numberToWordsMRU } from "@/lib/number-to-words";
+import { useCurrency } from "@/hooks/use-currency";
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -27,8 +27,7 @@ export default function InvoiceDetail() {
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   if (!invoice) return <div className="p-8 text-center text-muted-foreground">Facture introuvable</div>;
 
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat("fr-MR", { minimumFractionDigits: 2 }).format(val) + " MRU";
+  const { formatCurrency, amountInWords, currency } = useCurrency();
 
   return (
     <>
@@ -97,7 +96,7 @@ export default function InvoiceDetail() {
                 </div>
                 <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-relaxed">
                   <span className="font-semibold">Arrêtée la présente facture à la somme de :</span>{" "}
-                  <span className="font-bold uppercase text-blue-700">{numberToWordsMRU(invoice.total)}</span>
+                  <span className="font-bold uppercase text-blue-700">{amountInWords(invoice.total)}</span>
                 </div>
               </CardContent>
             </Card>

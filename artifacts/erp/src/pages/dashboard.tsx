@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useCurrency } from "@/hooks/use-currency";
 import { useGetDashboardSummary, useGetRevenueChart, useGetDepartmentDistribution } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -104,8 +105,7 @@ export default function Dashboard() {
     queryFn: () => fetch(`${BASE}/api/dashboard/consultations-stats`, { credentials: "include" }).then(r => r.json()),
   });
 
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat("fr-MR", { style: "currency", currency: "MRU", maximumFractionDigits: 0 }).format(val);
+  const { formatCurrency } = useCurrency();
 
   const projectStatusData = (projectsStats?.byStatus ?? []).map(r => ({
     name: PROJECT_STATUS_LABELS[r.status] ?? r.status,
