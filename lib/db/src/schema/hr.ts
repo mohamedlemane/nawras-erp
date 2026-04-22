@@ -30,6 +30,7 @@ export const employeesTable = pgTable("employees", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
   employeeCode: varchar("employee_code", { length: 50 }).notNull(),
+  nni: varchar("nni", { length: 50 }),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
   gender: varchar("gender", { length: 10 }),

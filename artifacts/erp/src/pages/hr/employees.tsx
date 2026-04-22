@@ -16,10 +16,11 @@ import { Plus, Search, Eye, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
-const emptyForm = (): CreateEmployeeBody => ({
+const emptyForm = (): CreateEmployeeBody & { nni: string; employeeCode: string } => ({
   firstName: "", lastName: "", gender: null, birthDate: null, phone: null,
   email: null, address: null, hireDate: format(new Date(), 'yyyy-MM-dd'),
   departmentId: null, positionId: null, managerId: null, notes: null, emergencyContact: null,
+  nni: "", employeeCode: "",
 });
 
 export default function EmployeesList() {
@@ -28,7 +29,7 @@ export default function EmployeesList() {
   const [search, setSearch] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editItem, setEditItem] = useState<Employee | null>(null);
-  const [form, setForm] = useState<CreateEmployeeBody>(emptyForm());
+  const [form, setForm] = useState<ReturnType<typeof emptyForm>>(emptyForm());
 
   const { data, isLoading } = useListEmployees({ search } as any);
   const { data: departments } = useListDepartments();
@@ -56,6 +57,7 @@ export default function EmployeesList() {
       birthDate: emp.birthDate ?? null, phone: emp.phone ?? null, email: emp.email ?? null,
       address: emp.address ?? null, hireDate: emp.hireDate, departmentId: emp.departmentId ?? null,
       positionId: emp.positionId ?? null, managerId: emp.managerId ?? null, notes: null, emergencyContact: null,
+      nni: (emp as any).nni ?? "", employeeCode: emp.employeeCode ?? "",
     });
     setSheetOpen(true);
   };
@@ -147,11 +149,28 @@ export default function EmployeesList() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <Label>Code employé</Label>
+                <Input
+                  value={(form as any).employeeCode ?? ""}
+                  placeholder="Auto si vide (ex: EMP-00001)"
+                  onChange={e => setForm(f => ({ ...f, employeeCode: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>NNI</Label>
+                <Input
+                  value={(form as any).nni ?? ""}
+                  placeholder="Numéro national d'identité"
+                  onChange={e => setForm(f => ({ ...f, nni: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <Label>Genre</Label>
-                <Select value={form.gender || "none"} onValueChange={v => setForm(f => ({ ...f, gender: v === "none" ? null : v }))}>
+                <Select value={form.gender || "_none"} onValueChange={v => setForm(f => ({ ...f, gender: v === "_none" ? null : v }))}>
                   <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Non précisé</SelectItem>
                     <SelectItem value="male">Homme</SelectItem>
                     <SelectItem value="female">Femme</SelectItem>
                   </SelectContent>

@@ -5491,6 +5491,29 @@ export const useCreateLeaveType = <
   return useMutation(getCreateLeaveTypeMutationOptions(options));
 };
 
+export const updateLeaveType = async (
+  id: number,
+  data: Partial<CreateLeaveTypeBody>,
+  options?: RequestInit,
+): Promise<LeaveType> => {
+  return customFetch<LeaveType>(`/api/leave-types/${id}`, {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(data),
+  });
+};
+
+export const deleteLeaveType = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(`/api/leave-types/${id}`, {
+    ...options,
+    method: "DELETE",
+  });
+};
+
 /**
  * @summary List leave requests
  */

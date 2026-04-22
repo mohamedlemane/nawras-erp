@@ -3,7 +3,7 @@ import { useGetEmployee } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Mail, Phone, MapPin, Building2, Calendar, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Edit, Mail, Phone, MapPin, Building2, Calendar, ShieldAlert, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 
 export default function EmployeeDetail() {
@@ -43,6 +43,12 @@ export default function EmployeeDetail() {
               <Phone className="w-4 h-4 text-muted-foreground" />
               <span>{employee.phone || '-'}</span>
             </div>
+            {(employee as any).nni && (
+              <div className="flex items-center gap-3">
+                <CreditCard className="w-4 h-4 text-muted-foreground" />
+                <span className="font-mono text-sm">NNI : {(employee as any).nni}</span>
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <MapPin className="w-4 h-4 text-muted-foreground" />
               <span>{employee.address || '-'}</span>

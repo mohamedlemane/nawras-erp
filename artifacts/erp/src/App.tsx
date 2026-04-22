@@ -27,6 +27,7 @@ import Departments from "@/pages/hr/departments";
 import Positions from "@/pages/hr/positions";
 import Contracts from "@/pages/hr/contracts";
 import Leaves from "@/pages/hr/leaves";
+import LeaveTypes from "@/pages/hr/leave-types";
 import Attendances from "@/pages/hr/attendances";
 import Documents from "@/pages/hr/documents";
 
@@ -85,6 +86,7 @@ function AppRouter() {
             <Route path="/hr/positions" component={Positions} />
             <Route path="/hr/contracts" component={Contracts} />
             <Route path="/hr/leaves" component={Leaves} />
+            <Route path="/hr/leave-types" component={LeaveTypes} />
             <Route path="/hr/attendances" component={Attendances} />
             <Route path="/hr/documents" component={Documents} />
 

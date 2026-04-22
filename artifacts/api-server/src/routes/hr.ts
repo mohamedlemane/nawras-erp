@@ -137,6 +137,7 @@ router.get("/employees", requireAuth, async (req: Request, res: Response): Promi
   const data = await db
     .select({
       id: employeesTable.id, companyId: employeesTable.companyId, employeeCode: employeesTable.employeeCode,
+      nni: employeesTable.nni,
       firstName: employeesTable.firstName, lastName: employeesTable.lastName, gender: employeesTable.gender,
       birthDate: employeesTable.birthDate, phone: employeesTable.phone, email: employeesTable.email,
       address: employeesTable.address, hireDate: employeesTable.hireDate,
@@ -159,13 +160,16 @@ router.post("/employees", requireAuth, async (req: Request, res: Response): Prom
   const info = await getUserCompanyInfo(req.user.id);
   if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
-  const { firstName, lastName, gender, birthDate, phone, email, address, hireDate, departmentId, positionId, managerId, notes, emergencyContact } = req.body;
+  const { firstName, lastName, gender, nni, birthDate, phone, email, address, hireDate, departmentId, positionId, managerId, notes, emergencyContact, employeeCode: providedCode } = req.body;
   if (!firstName || !lastName || !hireDate) { res.status(400).json({ error: "firstName, lastName, hireDate required" }); return; }
 
-  const [{ cnt }] = await db.select({ cnt: sql<number>`count(*)::int` }).from(employeesTable).where(eq(employeesTable.companyId, info.companyId));
-  const employeeCode = `EMP-${String(cnt + 1).padStart(5, "0")}`;
+  let employeeCode = providedCode?.trim() || null;
+  if (!employeeCode) {
+    const [{ cnt }] = await db.select({ cnt: sql<number>`count(*)::int` }).from(employeesTable).where(eq(employeesTable.companyId, info.companyId));
+    employeeCode = `EMP-${String(cnt + 1).padStart(5, "0")}`;
+  }
 
-  const [emp] = await db.insert(employeesTable).values({ companyId: info.companyId, employeeCode, firstName, lastName, gender, birthDate, phone, email, address, hireDate, departmentId: departmentId ?? null, positionId: positionId ?? null, managerId: managerId ?? null, notes, emergencyContact, createdBy: req.user.id }).returning();
+  const [emp] = await db.insert(employeesTable).values({ companyId: info.companyId, employeeCode, nni: nni ?? null, firstName, lastName, gender, birthDate, phone, email, address, hireDate, departmentId: departmentId ?? null, positionId: positionId ?? null, managerId: managerId ?? null, notes, emergencyContact, createdBy: req.user.id }).returning();
   res.status(201).json({ ...serEmp({ ...emp!, departmentName: null, positionName: null }) });
 });
 
@@ -177,7 +181,7 @@ router.get("/employees/:id", requireAuth, async (req: Request, res: Response): P
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
 
-  const [emp] = await db.select({ id: employeesTable.id, companyId: employeesTable.companyId, employeeCode: employeesTable.employeeCode, firstName: employeesTable.firstName, lastName: employeesTable.lastName, gender: employeesTable.gender, birthDate: employeesTable.birthDate, phone: employeesTable.phone, email: employeesTable.email, address: employeesTable.address, hireDate: employeesTable.hireDate, departmentId: employeesTable.departmentId, departmentName: departmentsTable.name, positionId: employeesTable.positionId, positionName: positionsTable.name, managerId: employeesTable.managerId, employmentStatus: employeesTable.employmentStatus, notes: employeesTable.notes, emergencyContact: employeesTable.emergencyContact, createdAt: employeesTable.createdAt, updatedAt: employeesTable.updatedAt }).from(employeesTable).leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id)).leftJoin(positionsTable, eq(employeesTable.positionId, positionsTable.id)).where(and(eq(employeesTable.id, id), eq(employeesTable.companyId, info.companyId))).limit(1);
+  const [emp] = await db.select({ id: employeesTable.id, companyId: employeesTable.companyId, employeeCode: employeesTable.employeeCode, nni: employeesTable.nni, firstName: employeesTable.firstName, lastName: employeesTable.lastName, gender: employeesTable.gender, birthDate: employeesTable.birthDate, phone: employeesTable.phone, email: employeesTable.email, address: employeesTable.address, hireDate: employeesTable.hireDate, departmentId: employeesTable.departmentId, departmentName: departmentsTable.name, positionId: employeesTable.positionId, positionName: positionsTable.name, managerId: employeesTable.managerId, employmentStatus: employeesTable.employmentStatus, notes: employeesTable.notes, emergencyContact: employeesTable.emergencyContact, createdAt: employeesTable.createdAt, updatedAt: employeesTable.updatedAt }).from(employeesTable).leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id)).leftJoin(positionsTable, eq(employeesTable.positionId, positionsTable.id)).where(and(eq(employeesTable.id, id), eq(employeesTable.companyId, info.companyId))).limit(1);
   if (!emp) { res.status(404).json({ error: "Employee not found" }); return; }
 
   const contracts = await db.select().from(contractsTable).where(eq(contractsTable.employeeId, id));
@@ -192,8 +196,10 @@ router.patch("/employees/:id", requireAuth, async (req: Request, res: Response):
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  const { firstName, lastName, gender, birthDate, phone, email, address, hireDate, departmentId, positionId, managerId, employmentStatus, notes, emergencyContact } = req.body;
-  const [emp] = await db.update(employeesTable).set({ firstName, lastName, gender, birthDate, phone, email, address, hireDate, departmentId, positionId, managerId, employmentStatus, notes, emergencyContact, updatedBy: req.user.id }).where(and(eq(employeesTable.id, id), eq(employeesTable.companyId, info.companyId))).returning();
+  const { firstName, lastName, gender, nni, birthDate, phone, email, address, hireDate, departmentId, positionId, managerId, employmentStatus, notes, emergencyContact, employeeCode: newCode } = req.body;
+  const updateData: any = { firstName, lastName, gender, nni: nni ?? null, birthDate, phone, email, address, hireDate, departmentId, positionId, managerId, employmentStatus, notes, emergencyContact, updatedBy: req.user.id };
+  if (newCode?.trim()) updateData.employeeCode = newCode.trim();
+  const [emp] = await db.update(employeesTable).set(updateData).where(and(eq(employeesTable.id, id), eq(employeesTable.companyId, info.companyId))).returning();
   if (!emp) { res.status(404).json({ error: "Employee not found" }); return; }
   res.json(serEmp({ ...emp, departmentName: null, positionName: null }));
 });
@@ -286,6 +292,35 @@ router.post("/leave-types", requireAuth, async (req: Request, res: Response): Pr
   if (!name) { res.status(400).json({ error: "name is required" }); return; }
   const [type] = await db.insert(leaveTypesTable).values({ companyId: info.companyId, name, daysAllowed: daysAllowed ?? null, description }).returning();
   res.status(201).json({ ...type!, createdAt: type!.createdAt.toISOString() });
+});
+
+router.patch("/leave-types/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const info = await getUserCompanyInfo(req.user.id);
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+
+  const id = parseInt(String(req.params.id), 10);
+  const { name, daysAllowed, description } = req.body;
+  const [type] = await db.update(leaveTypesTable)
+    .set({ ...(name !== undefined && { name }), ...(daysAllowed !== undefined && { daysAllowed: daysAllowed ?? null }), ...(description !== undefined && { description }) })
+    .where(and(eq(leaveTypesTable.id, id), eq(leaveTypesTable.companyId, info.companyId)))
+    .returning();
+  if (!type) { res.status(404).json({ error: "Type de congé introuvable" }); return; }
+  res.json({ ...type, createdAt: type.createdAt.toISOString() });
+});
+
+router.delete("/leave-types/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const info = await getUserCompanyInfo(req.user.id);
+  if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
+
+  const id = parseInt(String(req.params.id), 10);
+  try {
+    await db.delete(leaveTypesTable).where(and(eq(leaveTypesTable.id, id), eq(leaveTypesTable.companyId, info.companyId)));
+    res.sendStatus(204);
+  } catch (err) {
+    if (!handleDbError(err, res, "leave_type")) throw err;
+  }
 });
 
 // ── LEAVE REQUESTS ────────────────────────────────────────────────────────────

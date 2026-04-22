@@ -73,6 +73,7 @@ const NAV_ITEMS = [
       { title: "Postes", href: "/hr/positions", icon: Briefcase },
       { title: "Contrats", href: "/hr/contracts", icon: ScrollText },
       { title: "Congés", href: "/hr/leaves", icon: CalendarDays },
+      { title: "Types de congé", href: "/hr/leave-types", icon: Tag },
       { title: "Présences", href: "/hr/attendances", icon: Clock },
       { title: "Documents", href: "/hr/documents", icon: Files },
     ],
