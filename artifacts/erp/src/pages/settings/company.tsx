@@ -7,9 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, Banknote, MapPin, Upload, Save, X, Coins } from "lucide-react";
-import { CURRENCIES } from "@/lib/currencies";
+import { CurrencySelect } from "@/components/CurrencySelect";
 
 export default function CompanySettings() {
   const queryClient = useQueryClient();
@@ -287,22 +286,14 @@ export default function CompanySettings() {
           </CardHeader>
           <CardContent>
             <div className="space-y-1.5 max-w-md">
-              <Label htmlFor="currency">Devise par défaut</Label>
-              <Select
+              <CurrencySelect
+                label="Devise par défaut"
+                showDefault={false}
                 value={form.currency}
-                onValueChange={(value) => { setForm((p) => ({ ...p, currency: value })); setSuccess(false); }}
-              >
-                <SelectTrigger id="currency">
-                  <SelectValue placeholder="Choisir une devise" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCIES.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      <span className="font-mono mr-2">{c.symbol}</span> {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(code) => {
+                  if (code) { setForm((p) => ({ ...p, currency: code })); setSuccess(false); }
+                }}
+              />
               <p className="text-xs text-muted-foreground">
                 Le changement s'appliquera immédiatement à l'affichage des montants et au montant en lettres sur les documents.
               </p>

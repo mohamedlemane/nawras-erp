@@ -8,6 +8,7 @@ interface Props {
   value: string | null | undefined;
   onChange: (code: string | null) => void;
   label?: string;
+  showDefault?: boolean;
 }
 
 interface Opt {
@@ -33,7 +34,7 @@ const formatOption = (opt: Opt) => (
   </div>
 );
 
-export function CurrencySelect({ value, onChange, label = "Monnaie" }: Props) {
+export function CurrencySelect({ value, onChange, label = "Monnaie", showDefault = true }: Props) {
   const { data: company } = useGetMyCompany();
   const defaultCode = (company as any)?.currency ?? "MRU";
   const defaultCur = CURRENCIES.find((c) => c.code === defaultCode) ?? CURRENCIES[0];
@@ -44,19 +45,18 @@ export function CurrencySelect({ value, onChange, label = "Monnaie" }: Props) {
     currency: defaultCur,
     isDefault: true,
   };
-  const options: Opt[] = [
-    defaultOpt,
-    ...CURRENCIES.map((c) => ({
-      value: c.code,
-      label: `${c.code} ${c.label} ${c.country}`,
-      currency: c,
-    })),
-  ];
 
-  const selected =
-    !value
-      ? defaultOpt
-      : options.find((o) => o.value === value) ?? defaultOpt;
+  const currencyOpts: Opt[] = CURRENCIES.map((c) => ({
+    value: c.code,
+    label: `${c.code} ${c.label} ${c.country}`,
+    currency: c,
+  }));
+
+  const options: Opt[] = showDefault ? [defaultOpt, ...currencyOpts] : currencyOpts;
+
+  const selected = showDefault
+    ? (!value ? defaultOpt : options.find((o) => o.value === value) ?? defaultOpt)
+    : (options.find((o) => o.value === value) ?? null);
 
   return (
     <div>
