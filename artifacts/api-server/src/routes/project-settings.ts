@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and, asc } from "drizzle-orm";
 import { db, projectServiceTypesTable, consultationTypesTable } from "@workspace/db";
 import { requirePermission } from "../lib/rbac";
+import { handleDbError } from "../lib/db-errors";
 
 const router: IRouter = Router();
 
@@ -60,9 +61,13 @@ router.delete("/project-service-types/:id", requirePermission("create_invoice"),
   const companyId = cid(req);
   if (!companyId) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
   const id = Number(req.params.id);
-  await db.delete(projectServiceTypesTable)
-    .where(and(eq(projectServiceTypesTable.id, id), eq(projectServiceTypesTable.companyId, companyId)));
-  res.json({ success: true });
+  try {
+    await db.delete(projectServiceTypesTable)
+      .where(and(eq(projectServiceTypesTable.id, id), eq(projectServiceTypesTable.companyId, companyId)));
+    res.json({ success: true });
+  } catch (err) {
+    if (!handleDbError(err, res, "project_service_type")) throw err;
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -115,9 +120,13 @@ router.delete("/project-consultation-types/:id", requirePermission("create_invoi
   const companyId = cid(req);
   if (!companyId) { res.status(403).json({ error: "Sélectionnez une entreprise" }); return; }
   const id = Number(req.params.id);
-  await db.delete(consultationTypesTable)
-    .where(and(eq(consultationTypesTable.id, id), eq(consultationTypesTable.companyId, companyId)));
-  res.json({ success: true });
+  try {
+    await db.delete(consultationTypesTable)
+      .where(and(eq(consultationTypesTable.id, id), eq(consultationTypesTable.companyId, companyId)));
+    res.json({ success: true });
+  } catch (err) {
+    if (!handleDbError(err, res, "project_consultation_type")) throw err;
+  }
 });
 
 export default router;

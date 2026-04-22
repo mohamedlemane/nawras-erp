@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db, expenseTypesTable, expensesTable, partnersTable } from "@workspace/db";
 import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
+import { handleDbError } from "../lib/db-errors";
 import { createAuditLog } from "../lib/audit";
 
 const router: IRouter = Router();
@@ -86,9 +87,13 @@ router.delete("/expense-types/:id", requireAuth, async (req: Request, res: Respo
   if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  await db.delete(expenseTypesTable).where(and(eq(expenseTypesTable.id, id), eq(expenseTypesTable.companyId, info.companyId)));
-  await createAuditLog({ userId: req.user.id, companyId: info.companyId, action: "delete", entity: "expense_type", entityId: id });
-  res.status(204).send();
+  try {
+    await db.delete(expenseTypesTable).where(and(eq(expenseTypesTable.id, id), eq(expenseTypesTable.companyId, info.companyId)));
+    await createAuditLog({ userId: req.user.id, companyId: info.companyId, action: "delete", entity: "expense_type", entityId: id });
+    res.status(204).send();
+  } catch (err) {
+    if (!handleDbError(err, res, "expense_type")) throw err;
+  }
 });
 
 // ── EXPENSES ──────────────────────────────────────────────────────────────────

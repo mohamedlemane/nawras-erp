@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { and, eq, ilike, sql } from "drizzle-orm";
 import { db, departmentsTable, positionsTable, employeesTable, contractsTable, leaveTypesTable, leaveRequestsTable, attendancesTable, employeeDocumentsTable } from "@workspace/db";
 import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
+import { handleDbError } from "../lib/db-errors";
 import { createAuditLog } from "../lib/audit";
 
 const router: IRouter = Router();
@@ -58,8 +59,12 @@ router.delete("/departments/:id", requireAuth, async (req: Request, res: Respons
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  await db.delete(departmentsTable).where(and(eq(departmentsTable.id, id), eq(departmentsTable.companyId, info.companyId)));
-  res.sendStatus(204);
+  try {
+    await db.delete(departmentsTable).where(and(eq(departmentsTable.id, id), eq(departmentsTable.companyId, info.companyId)));
+    res.sendStatus(204);
+  } catch (err) {
+    if (!handleDbError(err, res, "department")) throw err;
+  }
 });
 
 // ── POSITIONS ─────────────────────────────────────────────────────────────────
@@ -104,8 +109,12 @@ router.delete("/positions/:id", requireAuth, async (req: Request, res: Response)
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  await db.delete(positionsTable).where(and(eq(positionsTable.id, id), eq(positionsTable.companyId, info.companyId)));
-  res.sendStatus(204);
+  try {
+    await db.delete(positionsTable).where(and(eq(positionsTable.id, id), eq(positionsTable.companyId, info.companyId)));
+    res.sendStatus(204);
+  } catch (err) {
+    if (!handleDbError(err, res, "position")) throw err;
+  }
 });
 
 // ── EMPLOYEES ─────────────────────────────────────────────────────────────────

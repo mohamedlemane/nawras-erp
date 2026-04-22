@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, inArray } from "drizzle-orm";
 import { db, rolesTable, permissionsTable, rolePermissionsTable } from "@workspace/db";
 import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
+import { handleDbError } from "../lib/db-errors";
 
 const router: IRouter = Router();
 
@@ -68,8 +69,12 @@ router.delete("/roles/:id", requireAuth, async (req: Request, res: Response): Pr
   if (!role) { res.status(404).json({ error: "Rôle introuvable" }); return; }
   if (role.isSystem) { res.status(403).json({ error: "Les rôles système ne peuvent pas être supprimés" }); return; }
 
-  await db.delete(rolesTable).where(eq(rolesTable.id, id));
-  res.sendStatus(204);
+  try {
+    await db.delete(rolesTable).where(eq(rolesTable.id, id));
+    res.sendStatus(204);
+  } catch (err) {
+    if (!handleDbError(err, res, "role")) throw err;
+  }
 });
 
 router.get("/roles/:id/permissions", requireAuth, async (req: Request, res: Response): Promise<void> => {

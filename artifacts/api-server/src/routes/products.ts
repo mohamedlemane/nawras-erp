@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { and, eq, ilike, sql } from "drizzle-orm";
 import { db, productsTable } from "@workspace/db";
 import { requireAuth, getUserCompanyInfo, handleNoCompany } from "../lib/rbac";
+import { handleDbError } from "../lib/db-errors";
 
 const router: IRouter = Router();
 
@@ -68,8 +69,12 @@ router.delete("/products/:id", requireAuth, async (req: Request, res: Response):
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  await db.delete(productsTable).where(and(eq(productsTable.id, id), eq(productsTable.companyId, info.companyId)));
-  res.sendStatus(204);
+  try {
+    await db.delete(productsTable).where(and(eq(productsTable.id, id), eq(productsTable.companyId, info.companyId)));
+    res.sendStatus(204);
+  } catch (err) {
+    if (!handleDbError(err, res, "product")) throw err;
+  }
 });
 
 function ser(p: typeof productsTable.$inferSelect) {
