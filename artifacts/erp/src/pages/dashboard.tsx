@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Users, FileText, CreditCard, UserCircle, FolderKanban,
   TrendingUp, CheckCircle2, Clock, Award, BarChart3, Briefcase,
+  ThumbsUp, ThumbsDown,
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -151,29 +152,38 @@ export default function Dashboard() {
         <h2 className="text-base font-semibold text-muted-foreground mb-3 flex items-center gap-2">
           <CreditCard className="w-4 h-4" /> Facturation & Commercial
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard
-            title="Revenu Mensuel"
-            value={formatCurrency(summary?.monthlyRevenue || 0)}
-            icon={CreditCard}
+            title="Devis Acceptés"
+            value={(summary as any)?.acceptedQuotes ?? 0}
+            icon={ThumbsUp}
             color="text-green-600"
-            sub={`Total cumulé : ${formatCurrency(summary?.totalRevenue || 0)}`}
+            sub="Devis confirmés par le client"
+            href="/billing/quotes"
           />
           <StatCard
-            title="Factures Impayées"
-            value={summary?.unpaidInvoices || 0}
-            icon={FileText}
+            title="Devis Refusés"
+            value={(summary as any)?.rejectedQuotes ?? 0}
+            icon={ThumbsDown}
             color="text-destructive"
-            sub="Factures validées / partiellement payées"
-            href="/billing/invoices"
+            sub="Devis rejetés par le client"
+            href="/billing/quotes"
           />
           <StatCard
             title="Devis en Attente"
             value={summary?.pendingQuotes || 0}
             icon={Clock}
             color="text-amber-600"
-            sub="Devis non encore validés"
+            sub="Brouillons non encore envoyés"
             href="/billing/quotes"
+          />
+          <StatCard
+            title="Factures Impayées"
+            value={summary?.unpaidInvoices || 0}
+            icon={FileText}
+            color="text-orange-600"
+            sub="Validées / partiellement payées"
+            href="/billing/invoices"
           />
           <StatCard
             title="Clients & Fournisseurs"

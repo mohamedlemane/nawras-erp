@@ -12,38 +12,39 @@ router.get("/dashboard/summary", requireAuth, async (req: Request, res: Response
   if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
   const cid = info.companyId;
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [
     [customerCount],
     [supplierCount],
     [pendingQuotesCount],
+    [acceptedQuotesCount],
+    [rejectedQuotesCount],
     [unpaidInvoicesCount],
     [totalRevenue],
     [empCount],
     [pendingLeavesCount],
-    [monthlyRevenue],
   ] = await Promise.all([
     db.select({ count: sql<number>`count(*)::int` }).from(partnersTable).where(and(eq(partnersTable.companyId, cid), eq(partnersTable.type, "customer"))),
     db.select({ count: sql<number>`count(*)::int` }).from(partnersTable).where(and(eq(partnersTable.companyId, cid), eq(partnersTable.type, "supplier"))),
     db.select({ count: sql<number>`count(*)::int` }).from(quotesTable).where(and(eq(quotesTable.companyId, cid), eq(quotesTable.status, "draft"))),
+    db.select({ count: sql<number>`count(*)::int` }).from(quotesTable).where(and(eq(quotesTable.companyId, cid), eq(quotesTable.status, "accepted"))),
+    db.select({ count: sql<number>`count(*)::int` }).from(quotesTable).where(and(eq(quotesTable.companyId, cid), eq(quotesTable.status, "rejected"))),
     db.select({ count: sql<number>`count(*)::int` }).from(invoicesTable).where(and(eq(invoicesTable.companyId, cid), sql`status in ('validated', 'partially_paid')`)),
     db.select({ total: sql<number>`coalesce(sum(amount), 0)::float` }).from(paymentsTable).where(eq(paymentsTable.companyId, cid)),
     db.select({ count: sql<number>`count(*)::int` }).from(employeesTable).where(and(eq(employeesTable.companyId, cid), eq(employeesTable.employmentStatus, "active"))),
     db.select({ count: sql<number>`count(*)::int` }).from(leaveRequestsTable).where(and(eq(leaveRequestsTable.companyId, cid), eq(leaveRequestsTable.status, "pending"))),
-    db.select({ total: sql<number>`coalesce(sum(amount), 0)::float` }).from(paymentsTable).where(and(eq(paymentsTable.companyId, cid), gte(paymentsTable.paymentDate, startOfMonth))),
   ]);
 
   res.json({
     totalCustomers: customerCount?.count ?? 0,
     totalSuppliers: supplierCount?.count ?? 0,
     pendingQuotes: pendingQuotesCount?.count ?? 0,
+    acceptedQuotes: acceptedQuotesCount?.count ?? 0,
+    rejectedQuotes: rejectedQuotesCount?.count ?? 0,
     unpaidInvoices: unpaidInvoicesCount?.count ?? 0,
     totalRevenue: totalRevenue?.total ?? 0,
     totalEmployees: empCount?.count ?? 0,
     pendingLeaves: pendingLeavesCount?.count ?? 0,
-    monthlyRevenue: monthlyRevenue?.total ?? 0,
   });
 });
 
