@@ -9,11 +9,19 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Pencil } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, Eye, Pencil, MoreHorizontal, ShieldOff, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,6 +40,7 @@ export default function EmployeesList() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editItem, setEditItem] = useState<Employee | null>(null);
   const [form, setForm] = useState<ReturnType<typeof emptyForm>>(emptyForm());
+  const [confirmTarget, setConfirmTarget] = useState<Employee | null>(null);
 
   const { data: rawData, isLoading } = useListEmployees({ search } as any);
   const { data: departments } = useListDepartments();
@@ -55,8 +64,18 @@ export default function EmployeesList() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CreateEmployeeBody }) => updateEmployee(id, data),
+    mutationFn: ({ id, data }: { id: number; data: any }) => updateEmployee(id, data),
     onSuccess: () => { invalidate(); setSheetOpen(false); toast({ title: "Employé mis à jour" }); },
+    onError: (e: Error) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) => updateEmployee(id, { employmentStatus: status } as any),
+    onSuccess: (_, { status }) => {
+      invalidate();
+      setConfirmTarget(null);
+      toast({ title: status === "terminated" ? "Employé désactivé" : "Employé réactivé" });
+    },
     onError: (e: Error) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
   });
 
@@ -78,8 +97,6 @@ export default function EmployeesList() {
     editItem ? updateMutation.mutate({ id: editItem.id, data: form }) : createMutation.mutate(form);
   };
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
-
   const getStatusColor = (s: string) => {
     switch (s) {
       case 'active': return 'bg-green-100 text-green-700';
@@ -88,7 +105,7 @@ export default function EmployeesList() {
       default: return 'bg-gray-100 text-gray-700';
     }
   };
-  const statusLabel = (s: string) => ({ active: 'Actif', on_leave: 'En congé', terminated: 'Terminé' }[s] || s);
+  const statusLabel = (s: string) => ({ active: 'Actif', on_leave: 'En congé', terminated: 'Désactivé' }[s] || s);
 
   return (
     <div className="space-y-6">
@@ -140,36 +157,63 @@ export default function EmployeesList() {
                 <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">Aucun employé trouvé</TableCell></TableRow>
               ) : data.data.map(emp => {
                 const isOnLeave = !!(emp as any).onLeave;
+                const isTerminated = emp.employmentStatus === 'terminated';
                 return (
-                <TableRow key={emp.id}>
-                  <TableCell className="text-muted-foreground font-mono text-xs">{emp.employeeCode}</TableCell>
-                  <TableCell className="font-medium">{emp.firstName} {emp.lastName}</TableCell>
-                  <TableCell>{emp.departmentName || '-'}</TableCell>
-                  <TableCell>{emp.positionName || '-'}</TableCell>
-                  <TableCell>{format(new Date(emp.hireDate), 'dd/MM/yyyy')}</TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusColor(emp.employmentStatus)}`}>
-                      {statusLabel(emp.employmentStatus)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {isOnLeave ? (
-                      <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">
-                        Oui
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-muted-foreground">
-                        Non
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(emp)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" asChild>
-                      <Link href={`/hr/employees/${emp.id}`}><Eye className="w-4 h-4" /></Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  <TableRow key={emp.id} className={isTerminated ? "opacity-50" : ""}>
+                    <TableCell className="text-muted-foreground font-mono text-xs">{emp.employeeCode}</TableCell>
+                    <TableCell className="font-medium">
+                      {emp.firstName} {emp.lastName}
+                      {isTerminated && <span className="ml-2 text-xs text-red-500">(désactivé)</span>}
+                    </TableCell>
+                    <TableCell>{emp.departmentName || '-'}</TableCell>
+                    <TableCell>{emp.positionName || '-'}</TableCell>
+                    <TableCell>{format(new Date(emp.hireDate), 'dd/MM/yyyy')}</TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusColor(emp.employmentStatus)}`}>
+                        {statusLabel(emp.employmentStatus)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {isOnLeave ? (
+                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">Oui</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">Non</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/hr/employees/${emp.id}`} className="flex items-center gap-2 cursor-pointer">
+                              <Eye className="w-4 h-4" /> Voir la fiche
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEdit(emp)} className="flex items-center gap-2">
+                            <Pencil className="w-4 h-4" /> Modifier
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {isTerminated ? (
+                            <DropdownMenuItem
+                              className="flex items-center gap-2 text-green-600 focus:text-green-600"
+                              onClick={() => toggleStatusMutation.mutate({ id: emp.id, status: 'active' })}
+                            >
+                              <ShieldCheck className="w-4 h-4" /> Réactiver
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                              onClick={() => setConfirmTarget(emp)}
+                            >
+                              <ShieldOff className="w-4 h-4" /> Désactiver
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
             </TableBody>
@@ -177,6 +221,29 @@ export default function EmployeesList() {
         </CardContent>
       </Card>
 
+      {/* Confirmation désactivation */}
+      <AlertDialog open={!!confirmTarget} onOpenChange={open => { if (!open) setConfirmTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Désactiver cet employé ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{confirmTarget?.firstName} {confirmTarget?.lastName}</strong> sera marqué comme désactivé.
+              Vous pourrez le réactiver à tout moment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => confirmTarget && toggleStatusMutation.mutate({ id: confirmTarget.id, status: 'terminated' })}
+            >
+              Désactiver
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Sheet création/édition */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent className="sm:max-w-lg overflow-y-auto">
           <SheetHeader><SheetTitle>{editItem ? "Modifier l'employé" : "Nouvel employé"}</SheetTitle></SheetHeader>
@@ -188,19 +255,11 @@ export default function EmployeesList() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Code employé</Label>
-                <Input
-                  value={(form as any).employeeCode ?? ""}
-                  placeholder="Auto si vide (ex: EMP-00001)"
-                  onChange={e => setForm(f => ({ ...f, employeeCode: e.target.value }))}
-                />
+                <Input value={(form as any).employeeCode ?? ""} placeholder="Auto si vide (ex: EMP-00001)" onChange={e => setForm(f => ({ ...f, employeeCode: e.target.value }))} />
               </div>
               <div>
                 <Label>NNI</Label>
-                <Input
-                  value={(form as any).nni ?? ""}
-                  placeholder="Numéro national d'identité"
-                  onChange={e => setForm(f => ({ ...f, nni: e.target.value }))}
-                />
+                <Input value={(form as any).nni ?? ""} placeholder="Numéro national d'identité" onChange={e => setForm(f => ({ ...f, nni: e.target.value }))} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -221,15 +280,11 @@ export default function EmployeesList() {
               <div><Label>Téléphone</Label><Input value={form.phone ?? ""} onChange={e => setForm(f => ({ ...f, phone: e.target.value || null }))} /></div>
               <div><Label>Email</Label><Input type="email" value={form.email ?? ""} onChange={e => setForm(f => ({ ...f, email: e.target.value || null }))} /></div>
             </div>
+            <div><Label>Adresse</Label><Input value={form.address ?? ""} onChange={e => setForm(f => ({ ...f, address: e.target.value || null }))} /></div>
             <div>
               <Label>Département</Label>
-              <ReactSelect
-                unstyled
-                classNames={rsClassNames}
-                styles={rsPortalStyles}
-                isClearable
-                placeholder="Rechercher un département..."
-                noOptionsMessage={() => "Aucun département trouvé"}
+              <ReactSelect unstyled classNames={rsClassNames} styles={rsPortalStyles}
+                placeholder="Sélectionner..." isClearable
                 options={departments?.map(d => ({ value: d.id, label: d.name })) ?? []}
                 value={form.departmentId ? { value: form.departmentId, label: departments?.find(d => d.id === form.departmentId)?.name ?? "" } : null}
                 onChange={opt => setForm(f => ({ ...f, departmentId: opt ? opt.value : null }))}
@@ -237,24 +292,19 @@ export default function EmployeesList() {
             </div>
             <div>
               <Label>Poste</Label>
-              <ReactSelect
-                unstyled
-                classNames={rsClassNames}
-                styles={rsPortalStyles}
-                isClearable
-                placeholder="Rechercher un poste..."
-                noOptionsMessage={() => "Aucun poste trouvé"}
+              <ReactSelect unstyled classNames={rsClassNames} styles={rsPortalStyles}
+                placeholder="Sélectionner..." isClearable
                 options={positions?.map(p => ({ value: p.id, label: p.name })) ?? []}
                 value={form.positionId ? { value: form.positionId, label: positions?.find(p => p.id === form.positionId)?.name ?? "" } : null}
                 onChange={opt => setForm(f => ({ ...f, positionId: opt ? opt.value : null }))}
               />
             </div>
-            <div><Label>Adresse</Label><Input value={form.address ?? ""} onChange={e => setForm(f => ({ ...f, address: e.target.value || null }))} /></div>
-            <div><Label>Contact d'urgence</Label><Input value={form.emergencyContact ?? ""} onChange={e => setForm(f => ({ ...f, emergencyContact: e.target.value || null }))} /></div>
-            <SheetFooter className="pt-4">
+            <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setSheetOpen(false)}>Annuler</Button>
-              <Button type="submit" disabled={isPending}>{isPending ? "En cours..." : editItem ? "Modifier" : "Créer"}</Button>
-            </SheetFooter>
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                {(createMutation.isPending || updateMutation.isPending) ? "Enregistrement..." : editItem ? "Mettre à jour" : "Créer"}
+              </Button>
+            </div>
           </form>
         </SheetContent>
       </Sheet>
