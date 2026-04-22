@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { AttachmentsPanel } from "@/components/projects/AttachmentsPanel";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
@@ -434,8 +435,17 @@ export default function Consultations() {
               </div>
               <div>
                 <Label>Montant estimé</Label>
-                <Input type="number" value={form.estimatedAmount ?? ""} placeholder="0"
-                  onChange={e => setForm(f => ({ ...f, estimatedAmount: e.target.value }))} />
+                <div className="flex gap-2">
+                  <Input type="number" value={form.estimatedAmount ?? ""} placeholder="0"
+                    className="flex-1"
+                    onChange={e => setForm(f => ({ ...f, estimatedAmount: e.target.value }))} />
+                  <div className="w-40">
+                    <CurrencySelect
+                      value={form.currency ?? "MRU"}
+                      onChange={v => setForm(f => ({ ...f, currency: v ?? "MRU" }))}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

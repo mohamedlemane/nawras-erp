@@ -15,6 +15,7 @@ import { Plus, FolderKanban, Anchor, Mountain, Search, ChevronRight, ChevronLeft
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
@@ -366,21 +367,19 @@ export default function Projects() {
                 <Input type="date" value={form.endDatePlanned?.substring(0, 10) ?? ""}
                   onChange={e => setForm(f => ({ ...f, endDatePlanned: e.target.value }))} />
               </div>
-              <div>
+              <div className="col-span-2">
                 <Label>Montant contractuel</Label>
-                <Input type="number" placeholder="0" value={form.contractAmount ?? ""}
-                  onChange={e => setForm(f => ({ ...f, contractAmount: e.target.value }))} />
-              </div>
-              <div>
-                <Label>Devise</Label>
-                <Select value={form.currency ?? "MRU"} onValueChange={v => setForm(f => ({ ...f, currency: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MRU">MRU (Ouguiya)</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Input type="number" placeholder="0" value={form.contractAmount ?? ""}
+                    className="flex-1"
+                    onChange={e => setForm(f => ({ ...f, contractAmount: e.target.value }))} />
+                  <div className="w-44">
+                    <CurrencySelect
+                      value={form.currency ?? "MRU"}
+                      onChange={v => setForm(f => ({ ...f, currency: v ?? "MRU" }))}
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Responsables — react-select avec recherche */}
