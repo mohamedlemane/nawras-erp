@@ -35,6 +35,7 @@ import Consultations from "@/pages/projects/consultations";
 import ProjectsList from "@/pages/projects/projects";
 import ProjectDetail from "@/pages/projects/project-detail";
 import ProjectSettings from "@/pages/projects/settings";
+import ConsultationsStats from "@/pages/projects/stats";
 
 // Admin
 import Users from "@/pages/admin/users";
@@ -88,6 +89,7 @@ function AppRouter() {
             <Route path="/hr/documents" component={Documents} />
 
             <Route path="/projects/consultations" component={Consultations} />
+            <Route path="/projects/stats" component={ConsultationsStats} />
             <Route path="/projects/list" component={ProjectsList} />
             <Route path="/projects/settings" component={ProjectSettings} />
             <Route path="/projects/:id" component={ProjectDetail} />
