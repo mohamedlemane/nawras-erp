@@ -86,22 +86,43 @@ function StatCard({
   return href ? <Link href={href}>{content}</Link> : content;
 }
 
+type LeaveItem = {
+  id: number;
+  leaveTypeName: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  reason: string;
+};
+
 /* ─── Vue Employé ────────────────────────────────────────────────── */
 function EmployeeDashboard({ userEmail, userName }: { userEmail: string | null; userName: string }) {
-  const { data: myLeaves } = useQuery<{
-    id: number; leaveType: { name: string }; startDate: string; endDate: string;
-    status: string; reason: string;
-  }[]>({
-    queryKey: ["my-leaves", userEmail],
+  /* Étape 1 : retrouver l'employé via son email */
+  const { data: employeeData } = useQuery<{ data: { id: number }[] }>({
+    queryKey: ["employee-by-email", userEmail],
     queryFn: () =>
-      fetch(`${BASE}/api/leave-requests?employeeEmail=${encodeURIComponent(userEmail ?? "")}`, {
+      fetch(`${BASE}/api/employees?limit=1&email=${encodeURIComponent(userEmail ?? "")}`, {
         credentials: "include",
       }).then(r => r.json()),
     enabled: !!userEmail,
   });
 
-  const pending = (myLeaves ?? []).filter(l => l.status === "pending").length;
-  const approved = (myLeaves ?? []).filter(l => l.status === "approved").length;
+  const employeeId = employeeData?.data?.[0]?.id ?? null;
+
+  /* Étape 2 : congés de cet employé */
+  const { data: leavesResponse } = useQuery<{ data: LeaveItem[]; total: number }>({
+    queryKey: ["my-leaves", employeeId],
+    queryFn: () =>
+      fetch(`${BASE}/api/leave-requests?employeeId=${employeeId}&limit=100`, {
+        credentials: "include",
+      }).then(r => r.json()),
+    enabled: !!employeeId,
+  });
+
+  const myLeaves: LeaveItem[] = leavesResponse?.data ?? [];
+
+  const pending = myLeaves.filter(l => l.status === "pending").length;
+  const approved = myLeaves.filter(l => l.status === "approved").length;
 
   const STATUS_LABELS: Record<string, string> = {
     pending: "En attente",
@@ -173,7 +194,7 @@ function EmployeeDashboard({ userEmail, userName }: { userEmail: string | null; 
               {recent.map(leave => (
                 <div key={leave.id} className="py-3 flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium">{leave.leaveType?.name ?? "—"}</p>
+                    <p className="text-sm font-medium">{leave.leaveTypeName ?? "—"}</p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(leave.startDate).toLocaleDateString("fr-FR")} →{" "}
                       {new Date(leave.endDate).toLocaleDateString("fr-FR")}

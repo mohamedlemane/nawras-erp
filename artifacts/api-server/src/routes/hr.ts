@@ -129,9 +129,14 @@ router.get("/employees", requireAuth, async (req: Request, res: Response): Promi
   const offset = (page - 1) * limit;
   const departmentId = req.query.departmentId ? parseInt(String(req.query.departmentId), 10) : undefined;
   const search = typeof req.query.search === "string" ? req.query.search : undefined;
+  const emailFilter = typeof req.query.email === "string" ? req.query.email : undefined;
 
   const conditions = [eq(employeesTable.companyId, info.companyId)];
   if (departmentId) conditions.push(eq(employeesTable.departmentId, departmentId));
+  if (emailFilter) conditions.push(eq(employeesTable.email, emailFilter));
+  if (search) conditions.push(
+    sql`(lower(${employeesTable.firstName}) like ${"%" + search.toLowerCase() + "%"} or lower(${employeesTable.lastName}) like ${"%" + search.toLowerCase() + "%"})`
+  );
   const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
 
   const data = await db
