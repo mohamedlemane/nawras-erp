@@ -11,7 +11,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as RTooltip, PieChart, Pie, Cell, Legend, LineChart, Line,
 } from "recharts";
-import { ChevronDown, Filter, TrendingUp, Award, XCircle, Clock, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, TrendingUp, Award, XCircle, Clock, RotateCcw } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
@@ -72,6 +72,8 @@ export default function ConsultationsStats() {
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [applied, setApplied] = useState<Filters>(EMPTY);
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const [currencyPage, setCurrencyPage] = useState(0);
+  const CURRENCY_PAGE_SIZE = 5;
 
   // ── Reference data from DB ─────────────────────────────────────────────────
   const { data: consultationTypes = [] } = useQuery<ConfigType[]>({
@@ -112,8 +114,8 @@ export default function ConsultationsStats() {
   });
 
   const activeFiltersCount = Object.values(applied).filter(Boolean).length;
-  const handleApply = () => setApplied({ ...filters });
-  const handleReset = () => { setFilters(EMPTY); setApplied(EMPTY); };
+  const handleApply = () => { setApplied({ ...filters }); setCurrencyPage(0); };
+  const handleReset = () => { setFilters(EMPTY); setApplied(EMPTY); setCurrencyPage(0); };
 
   // ── Derived chart data ─────────────────────────────────────────────────────
   const summary = data?.summary ?? {};
@@ -439,39 +441,88 @@ export default function ConsultationsStats() {
             </Card>
           </div>
 
-          {/* Tableau devises */}
-          {byCurrency.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Répartition par devise</CardTitle></CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-muted-foreground text-xs">
-                        <th className="text-left py-2 pr-4">Devise</th>
-                        <th className="text-right py-2 pr-4">Nombre</th>
-                        <th className="text-right py-2">Montant estimé total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {byCurrency.map((r: any) => (
-                        <tr key={r.currency} className="border-b last:border-0">
-                          <td className="py-2 pr-4 font-mono font-semibold">{r.currency}</td>
-                          <td className="text-right py-2 pr-4">{fmtNum(r.count)}</td>
-                          <td className="text-right py-2 font-medium text-green-700">{fmtAmt(r.totalAmount, r.currency)}</td>
+          {/* Tableau devises avec pagination */}
+          {byCurrency.length > 0 && (() => {
+            const totalPages = Math.ceil(byCurrency.length / CURRENCY_PAGE_SIZE);
+            const pageRows = byCurrency.slice(currencyPage * CURRENCY_PAGE_SIZE, (currencyPage + 1) * CURRENCY_PAGE_SIZE);
+            const grandTotal = byCurrency.reduce((s: number, r: any) => s + r.count, 0);
+            return (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm">Répartition par devise</CardTitle>
+                  <span className="text-xs text-muted-foreground">{byCurrency.length} devise{byCurrency.length > 1 ? "s" : ""}</span>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-muted-foreground text-xs">
+                          <th className="text-left py-2 pr-4">Devise</th>
+                          <th className="text-right py-2 pr-4">Nombre</th>
+                          <th className="text-right py-2">Montant estimé total</th>
                         </tr>
-                      ))}
-                      <tr className="bg-muted/30 font-semibold">
-                        <td className="py-2 pr-4">Total</td>
-                        <td className="text-right py-2 pr-4">{fmtNum(byCurrency.reduce((s: number, r: any) => s + r.count, 0))}</td>
-                        <td className="text-right py-2 text-muted-foreground text-xs italic">Multi-devises</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                      </thead>
+                      <tbody>
+                        {pageRows.map((r: any) => (
+                          <tr key={r.currency} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                            <td className="py-2 pr-4 font-mono font-semibold">{r.currency}</td>
+                            <td className="text-right py-2 pr-4">{fmtNum(r.count)}</td>
+                            <td className="text-right py-2 font-medium text-green-700">{fmtAmt(r.totalAmount, r.currency)}</td>
+                          </tr>
+                        ))}
+                        {/* Ligne total toujours visible */}
+                        <tr className="bg-muted/40 font-semibold border-t-2">
+                          <td className="py-2 pr-4">Total général</td>
+                          <td className="text-right py-2 pr-4">{fmtNum(grandTotal)}</td>
+                          <td className="text-right py-2 text-muted-foreground text-xs italic">Multi-devises</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Contrôles de pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs text-muted-foreground">
+                        Page {currencyPage + 1} / {totalPages}
+                        {" "}·{" "}
+                        lignes {currencyPage * CURRENCY_PAGE_SIZE + 1}–{Math.min((currencyPage + 1) * CURRENCY_PAGE_SIZE, byCurrency.length)} sur {byCurrency.length}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline" size="icon" className="h-7 w-7"
+                          disabled={currencyPage === 0}
+                          onClick={() => setCurrencyPage(p => p - 1)}
+                          title="Page précédente"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </Button>
+                        {Array.from({ length: totalPages }, (_, i) => (
+                          <Button
+                            key={i}
+                            variant={currencyPage === i ? "default" : "outline"}
+                            size="icon"
+                            className="h-7 w-7 text-xs"
+                            onClick={() => setCurrencyPage(i)}
+                          >
+                            {i + 1}
+                          </Button>
+                        ))}
+                        <Button
+                          variant="outline" size="icon" className="h-7 w-7"
+                          disabled={currencyPage >= totalPages - 1}
+                          onClick={() => setCurrencyPage(p => p + 1)}
+                          title="Page suivante"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
         </>
       )}
     </div>
