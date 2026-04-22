@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Eye, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -27,13 +28,23 @@ export default function EmployeesList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
+  const [onLeaveFilter, setOnLeaveFilter] = useState<"all" | "yes" | "no">("all");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editItem, setEditItem] = useState<Employee | null>(null);
   const [form, setForm] = useState<ReturnType<typeof emptyForm>>(emptyForm());
 
-  const { data, isLoading } = useListEmployees({ search } as any);
+  const { data: rawData, isLoading } = useListEmployees({ search } as any);
   const { data: departments } = useListDepartments();
   const { data: positions } = useListPositions();
+
+  const data = rawData ? {
+    ...rawData,
+    data: rawData.data?.filter(emp => {
+      if (onLeaveFilter === "all") return true;
+      const isOnLeave = !!(emp as any).onLeave;
+      return onLeaveFilter === "yes" ? isOnLeave : !isOnLeave;
+    }),
+  } : rawData;
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
 
@@ -91,9 +102,21 @@ export default function EmployeesList() {
 
       <Card>
         <CardHeader className="py-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Rechercher un employé..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Rechercher un employé..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <Select value={onLeaveFilter} onValueChange={v => setOnLeaveFilter(v as "all" | "yes" | "no")}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="En congé" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les employés</SelectItem>
+                <SelectItem value="yes">En congé</SelectItem>
+                <SelectItem value="no">Pas en congé</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent>
@@ -106,15 +129,18 @@ export default function EmployeesList() {
                 <TableHead>Poste</TableHead>
                 <TableHead>Date d'embauche</TableHead>
                 <TableHead>Statut</TableHead>
+                <TableHead className="text-center">En congé</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center h-24">Chargement...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center h-24">Chargement...</TableCell></TableRow>
               ) : !data?.data?.length ? (
-                <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Aucun employé trouvé</TableCell></TableRow>
-              ) : data.data.map(emp => (
+                <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">Aucun employé trouvé</TableCell></TableRow>
+              ) : data.data.map(emp => {
+                const isOnLeave = !!(emp as any).onLeave;
+                return (
                 <TableRow key={emp.id}>
                   <TableCell className="text-muted-foreground font-mono text-xs">{emp.employeeCode}</TableCell>
                   <TableCell className="font-medium">{emp.firstName} {emp.lastName}</TableCell>
@@ -126,6 +152,17 @@ export default function EmployeesList() {
                       {statusLabel(emp.employmentStatus)}
                     </span>
                   </TableCell>
+                  <TableCell className="text-center">
+                    {isOnLeave ? (
+                      <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">
+                        Oui
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        Non
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(emp)}><Pencil className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" asChild>
@@ -133,7 +170,8 @@ export default function EmployeesList() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

@@ -145,6 +145,13 @@ router.get("/employees", requireAuth, async (req: Request, res: Response): Promi
       positionId: employeesTable.positionId, positionName: positionsTable.name,
       managerId: employeesTable.managerId, employmentStatus: employeesTable.employmentStatus,
       createdAt: employeesTable.createdAt, updatedAt: employeesTable.updatedAt,
+      onLeave: sql<boolean>`EXISTS (
+        SELECT 1 FROM leave_requests lr
+        WHERE lr.employee_id = ${employeesTable.id}
+          AND lr.status = 'approved'
+          AND lr.start_date <= CURRENT_DATE
+          AND lr.end_date >= CURRENT_DATE
+      )`,
     })
     .from(employeesTable)
     .leftJoin(departmentsTable, eq(employeesTable.departmentId, departmentsTable.id))
