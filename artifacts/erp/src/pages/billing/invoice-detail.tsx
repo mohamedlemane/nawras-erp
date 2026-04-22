@@ -24,10 +24,10 @@ export default function InvoiceDetail() {
     },
   });
 
+  const { formatCurrency, amountInWords, currency } = useCurrency();
+
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   if (!invoice) return <div className="p-8 text-center text-muted-foreground">Facture introuvable</div>;
-
-  const { formatCurrency, amountInWords, currency } = useCurrency();
 
   return (
     <>

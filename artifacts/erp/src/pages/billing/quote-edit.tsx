@@ -78,6 +78,8 @@ export default function QuoteEdit() {
     onError: (err) => handleApiError(err, "Échec de la mise à jour"),
   });
 
+  const { formatCurrency } = useCurrency();
+
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   if (!quote) return <div className="p-8 text-center text-muted-foreground">Devis introuvable</div>;
 
@@ -104,7 +106,6 @@ export default function QuoteEdit() {
   const removeItem = (idx: number) => setForm((f) => ({ ...f, items: (f.items ?? []).filter((_, i) => i !== idx) }));
 
   const total = items.reduce((acc, it) => acc + it.quantity * it.unitPrice * (1 + (it.taxRate ?? 0) / 100), 0);
-  const { formatCurrency } = useCurrency();
 
   return (
     <div className="space-y-6">

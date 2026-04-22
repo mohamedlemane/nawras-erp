@@ -73,10 +73,10 @@ export default function QuoteDetail() {
     onError: (err) => handleApiError(err, "Suppression impossible"),
   });
 
+  const { formatCurrency, amountInWords, currency } = useCurrency();
+
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   if (!quote) return <div className="p-8 text-center text-muted-foreground">Devis introuvable</div>;
-
-  const { formatCurrency, amountInWords, currency } = useCurrency();
 
   const handleConvertToInvoice = async () => {
     setConverting("invoice");

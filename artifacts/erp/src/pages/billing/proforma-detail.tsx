@@ -44,10 +44,10 @@ export default function ProformaDetail() {
     },
   });
 
+  const { formatCurrency, amountInWords, currency } = useCurrency();
+
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   if (!proforma) return <div className="p-8 text-center text-muted-foreground">Proforma introuvable</div>;
-
-  const { formatCurrency, amountInWords, currency } = useCurrency();
 
   const handleConvertToInvoice = async () => {
     setConverting(true);
