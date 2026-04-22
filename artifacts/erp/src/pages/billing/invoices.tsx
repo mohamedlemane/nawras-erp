@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import ReactSelect from "react-select";
 import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 import { useListInvoices, useListPartners, useListProducts, createInvoice } from "@workspace/api-client-react";
@@ -37,7 +38,7 @@ export default function InvoicesList() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [form, setForm] = useState<CreateInvoiceBody>({
     partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'),
-    dueDate: null, notes: null, items: [emptyItem()],
+    dueDate: null, currency: null, notes: null, items: [emptyItem()],
   });
 
   const { data, isLoading } = useListInvoices({ search: search || undefined, status: status !== "all" ? status : undefined } as any);
@@ -53,7 +54,7 @@ export default function InvoicesList() {
   });
 
   const openCreate = () => {
-    setForm({ partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'), dueDate: null, notes: null, items: [emptyItem()] });
+    setForm({ partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'), dueDate: null, currency: null, notes: null, items: [emptyItem()] });
     setSheetOpen(true);
   };
 
@@ -164,6 +165,7 @@ export default function InvoicesList() {
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Date d'émission *</Label><Input type="date" value={form.issueDate} onChange={e => setForm(f => ({ ...f, issueDate: e.target.value }))} required /></div>
               <div><Label>Date d'échéance</Label><Input type="date" value={form.dueDate ?? ""} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value || null }))} /></div>
+              <CurrencySelect value={form.currency} onChange={code => setForm(f => ({ ...f, currency: code }))} />
             </div>
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-sm">

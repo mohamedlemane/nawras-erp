@@ -17,6 +17,8 @@ export interface UpdateProformaBody {
   validUntil?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   status?: string;
   items?: DocumentItemInput[];
 }

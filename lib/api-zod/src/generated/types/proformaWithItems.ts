@@ -26,6 +26,8 @@ export interface ProformaWithItems {
   status: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   items: DocumentItem[];
   createdAt: string;
   updatedAt: string;

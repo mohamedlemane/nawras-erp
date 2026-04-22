@@ -35,7 +35,7 @@ router.get("/quotes", requireAuth, async (req: Request, res: Response): Promise<
     .select({
       id: quotesTable.id, companyId: quotesTable.companyId, quoteNumber: quotesTable.quoteNumber,
       partnerId: quotesTable.partnerId, partnerName: partnersTable.name, subject: quotesTable.subject,
-      issueDate: quotesTable.issueDate, validUntil: quotesTable.validUntil,
+      issueDate: quotesTable.issueDate, validUntil: quotesTable.validUntil, currency: quotesTable.currency,
       subtotal: quotesTable.subtotal, taxAmount: quotesTable.taxAmount, total: quotesTable.total,
       status: quotesTable.status, notes: quotesTable.notes, createdAt: quotesTable.createdAt, updatedAt: quotesTable.updatedAt,
     })
@@ -52,7 +52,7 @@ router.post("/quotes", requireAuth, async (req: Request, res: Response): Promise
   const info = await getUserCompanyInfo(req.user.id);
   if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
-  const { partnerId, subject, issueDate, validUntil, notes, items } = req.body;
+  const { partnerId, subject, issueDate, validUntil, currency, notes, items } = req.body;
   if (!items?.length) { res.status(400).json({ error: "items are required" }); return; }
 
   const year = new Date().getFullYear();
@@ -61,7 +61,7 @@ router.post("/quotes", requireAuth, async (req: Request, res: Response): Promise
 
   const { subtotal, taxAmount, total } = calcTotals(items);
 
-  const [quote] = await db.insert(quotesTable).values({ companyId: info.companyId, quoteNumber, partnerId: partnerId ?? null, subject, issueDate: new Date(issueDate), validUntil: validUntil ? new Date(validUntil) : null, subtotal: String(subtotal), taxAmount: String(taxAmount), total: String(total), notes, createdBy: req.user.id }).returning();
+  const [quote] = await db.insert(quotesTable).values({ companyId: info.companyId, quoteNumber, partnerId: partnerId ?? null, subject, issueDate: new Date(issueDate), validUntil: validUntil ? new Date(validUntil) : null, currency: currency ?? null, subtotal: String(subtotal), taxAmount: String(taxAmount), total: String(total), notes, createdBy: req.user.id }).returning();
 
   await db.insert(quoteItemsTable).values(items.map((it: any) => {
     const sub = Number(it.quantity) * Number(it.unitPrice);
@@ -79,7 +79,7 @@ router.get("/quotes/:id", requireAuth, async (req: Request, res: Response): Prom
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  const [quote] = await db.select({ id: quotesTable.id, companyId: quotesTable.companyId, quoteNumber: quotesTable.quoteNumber, partnerId: quotesTable.partnerId, partnerName: partnersTable.name, subject: quotesTable.subject, issueDate: quotesTable.issueDate, validUntil: quotesTable.validUntil, subtotal: quotesTable.subtotal, taxAmount: quotesTable.taxAmount, total: quotesTable.total, status: quotesTable.status, notes: quotesTable.notes, createdAt: quotesTable.createdAt, updatedAt: quotesTable.updatedAt }).from(quotesTable).leftJoin(partnersTable, eq(quotesTable.partnerId, partnersTable.id)).where(and(eq(quotesTable.id, id), eq(quotesTable.companyId, info.companyId))).limit(1);
+  const [quote] = await db.select({ id: quotesTable.id, companyId: quotesTable.companyId, quoteNumber: quotesTable.quoteNumber, partnerId: quotesTable.partnerId, partnerName: partnersTable.name, subject: quotesTable.subject, issueDate: quotesTable.issueDate, validUntil: quotesTable.validUntil, currency: quotesTable.currency, subtotal: quotesTable.subtotal, taxAmount: quotesTable.taxAmount, total: quotesTable.total, status: quotesTable.status, notes: quotesTable.notes, createdAt: quotesTable.createdAt, updatedAt: quotesTable.updatedAt }).from(quotesTable).leftJoin(partnersTable, eq(quotesTable.partnerId, partnersTable.id)).where(and(eq(quotesTable.id, id), eq(quotesTable.companyId, info.companyId))).limit(1);
   if (!quote) { res.status(404).json({ error: "Quote not found" }); return; }
 
   const items = await db.select().from(quoteItemsTable).where(eq(quoteItemsTable.quoteId, id));
@@ -93,7 +93,7 @@ router.patch("/quotes/:id", requireAuth, async (req: Request, res: Response): Pr
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  const { partnerId, subject, issueDate, validUntil, notes, status, items } = req.body;
+  const { partnerId, subject, issueDate, validUntil, currency, notes, status, items } = req.body;
 
   const [existing] = await db.select().from(quotesTable).where(and(eq(quotesTable.id, id), eq(quotesTable.companyId, info.companyId))).limit(1);
   if (!existing) { res.status(404).json({ error: "Devis introuvable" }); return; }
@@ -115,6 +115,7 @@ router.patch("/quotes/:id", requireAuth, async (req: Request, res: Response): Pr
   if (subject !== undefined) updates.subject = subject;
   if (issueDate !== undefined) updates.issueDate = new Date(issueDate);
   if (validUntil !== undefined) updates.validUntil = validUntil ? new Date(validUntil) : null;
+  if (currency !== undefined) updates.currency = currency;
   if (notes !== undefined) updates.notes = notes;
   if (status !== undefined) updates.status = status;
 
@@ -177,7 +178,7 @@ router.get("/proformas", requireAuth, async (req: Request, res: Response): Promi
   if (status) conditions.push(eq(proformasTable.status, status));
   const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
 
-  const data = await db.select({ id: proformasTable.id, companyId: proformasTable.companyId, proformaNumber: proformasTable.proformaNumber, partnerId: proformasTable.partnerId, partnerName: partnersTable.name, subject: proformasTable.subject, issueDate: proformasTable.issueDate, validUntil: proformasTable.validUntil, subtotal: proformasTable.subtotal, taxAmount: proformasTable.taxAmount, total: proformasTable.total, status: proformasTable.status, notes: proformasTable.notes, createdAt: proformasTable.createdAt, updatedAt: proformasTable.updatedAt }).from(proformasTable).leftJoin(partnersTable, eq(proformasTable.partnerId, partnersTable.id)).where(whereClause).limit(limit).offset(offset).orderBy(proformasTable.createdAt);
+  const data = await db.select({ id: proformasTable.id, companyId: proformasTable.companyId, proformaNumber: proformasTable.proformaNumber, partnerId: proformasTable.partnerId, partnerName: partnersTable.name, subject: proformasTable.subject, issueDate: proformasTable.issueDate, validUntil: proformasTable.validUntil, currency: proformasTable.currency, subtotal: proformasTable.subtotal, taxAmount: proformasTable.taxAmount, total: proformasTable.total, status: proformasTable.status, notes: proformasTable.notes, createdAt: proformasTable.createdAt, updatedAt: proformasTable.updatedAt }).from(proformasTable).leftJoin(partnersTable, eq(proformasTable.partnerId, partnersTable.id)).where(whereClause).limit(limit).offset(offset).orderBy(proformasTable.createdAt);
   const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(proformasTable).where(whereClause);
   res.json({ data: data.map(serProforma), total: count, page, limit });
 });
@@ -187,7 +188,7 @@ router.post("/proformas", requireAuth, async (req: Request, res: Response): Prom
   const info = await getUserCompanyInfo(req.user.id);
   if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
-  const { partnerId, subject, issueDate, validUntil, notes, items } = req.body;
+  const { partnerId, subject, issueDate, validUntil, currency, notes, items } = req.body;
   if (!items?.length) { res.status(400).json({ error: "items are required" }); return; }
 
   const year = new Date().getFullYear();
@@ -195,7 +196,7 @@ router.post("/proformas", requireAuth, async (req: Request, res: Response): Prom
   const proformaNumber = `PRO-${year}-${String(cnt + 1).padStart(4, "0")}`;
   const { subtotal, taxAmount, total } = calcTotals(items);
 
-  const [proforma] = await db.insert(proformasTable).values({ companyId: info.companyId, proformaNumber, partnerId: partnerId ?? null, subject, issueDate: new Date(issueDate), validUntil: validUntil ? new Date(validUntil) : null, subtotal: String(subtotal), taxAmount: String(taxAmount), total: String(total), notes, createdBy: req.user.id }).returning();
+  const [proforma] = await db.insert(proformasTable).values({ companyId: info.companyId, proformaNumber, partnerId: partnerId ?? null, subject, issueDate: new Date(issueDate), validUntil: validUntil ? new Date(validUntil) : null, currency: currency ?? null, subtotal: String(subtotal), taxAmount: String(taxAmount), total: String(total), notes, createdBy: req.user.id }).returning();
   await db.insert(proformaItemsTable).values(items.map((it: any) => {
     const sub = Number(it.quantity) * Number(it.unitPrice);
     const tax = sub * (Number(it.taxRate ?? 0) / 100);
@@ -212,7 +213,7 @@ router.get("/proformas/:id", requireAuth, async (req: Request, res: Response): P
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  const [proforma] = await db.select({ id: proformasTable.id, companyId: proformasTable.companyId, proformaNumber: proformasTable.proformaNumber, partnerId: proformasTable.partnerId, partnerName: partnersTable.name, subject: proformasTable.subject, issueDate: proformasTable.issueDate, validUntil: proformasTable.validUntil, subtotal: proformasTable.subtotal, taxAmount: proformasTable.taxAmount, total: proformasTable.total, status: proformasTable.status, notes: proformasTable.notes, createdAt: proformasTable.createdAt, updatedAt: proformasTable.updatedAt }).from(proformasTable).leftJoin(partnersTable, eq(proformasTable.partnerId, partnersTable.id)).where(and(eq(proformasTable.id, id), eq(proformasTable.companyId, info.companyId))).limit(1);
+  const [proforma] = await db.select({ id: proformasTable.id, companyId: proformasTable.companyId, proformaNumber: proformasTable.proformaNumber, partnerId: proformasTable.partnerId, partnerName: partnersTable.name, subject: proformasTable.subject, issueDate: proformasTable.issueDate, validUntil: proformasTable.validUntil, currency: proformasTable.currency, subtotal: proformasTable.subtotal, taxAmount: proformasTable.taxAmount, total: proformasTable.total, status: proformasTable.status, notes: proformasTable.notes, createdAt: proformasTable.createdAt, updatedAt: proformasTable.updatedAt }).from(proformasTable).leftJoin(partnersTable, eq(proformasTable.partnerId, partnersTable.id)).where(and(eq(proformasTable.id, id), eq(proformasTable.companyId, info.companyId))).limit(1);
   if (!proforma) { res.status(404).json({ error: "Proforma not found" }); return; }
 
   const items = await db.select().from(proformaItemsTable).where(eq(proformaItemsTable.proformaId, id));
@@ -226,12 +227,13 @@ router.patch("/proformas/:id", requireAuth, async (req: Request, res: Response):
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  const { partnerId, subject, issueDate, validUntil, notes, status, items } = req.body;
+  const { partnerId, subject, issueDate, validUntil, currency, notes, status, items } = req.body;
   let updates: any = { updatedBy: req.user.id };
   if (partnerId !== undefined) updates.partnerId = partnerId;
   if (subject !== undefined) updates.subject = subject;
   if (issueDate !== undefined) updates.issueDate = new Date(issueDate);
   if (validUntil !== undefined) updates.validUntil = validUntil ? new Date(validUntil) : null;
+  if (currency !== undefined) updates.currency = currency;
   if (notes !== undefined) updates.notes = notes;
   if (status !== undefined) updates.status = status;
 
@@ -278,7 +280,7 @@ router.get("/invoices", requireAuth, async (req: Request, res: Response): Promis
   if (status) conditions.push(eq(invoicesTable.status, status));
   const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
 
-  const data = await db.select({ id: invoicesTable.id, companyId: invoicesTable.companyId, invoiceNumber: invoicesTable.invoiceNumber, partnerId: invoicesTable.partnerId, partnerName: partnersTable.name, subject: invoicesTable.subject, issueDate: invoicesTable.issueDate, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal, taxAmount: invoicesTable.taxAmount, total: invoicesTable.total, amountPaid: invoicesTable.amountPaid, amountDue: invoicesTable.amountDue, status: invoicesTable.status, notes: invoicesTable.notes, createdAt: invoicesTable.createdAt, updatedAt: invoicesTable.updatedAt }).from(invoicesTable).leftJoin(partnersTable, eq(invoicesTable.partnerId, partnersTable.id)).where(whereClause).limit(limit).offset(offset).orderBy(invoicesTable.createdAt);
+  const data = await db.select({ id: invoicesTable.id, companyId: invoicesTable.companyId, invoiceNumber: invoicesTable.invoiceNumber, partnerId: invoicesTable.partnerId, partnerName: partnersTable.name, subject: invoicesTable.subject, issueDate: invoicesTable.issueDate, dueDate: invoicesTable.dueDate, currency: invoicesTable.currency, subtotal: invoicesTable.subtotal, taxAmount: invoicesTable.taxAmount, total: invoicesTable.total, amountPaid: invoicesTable.amountPaid, amountDue: invoicesTable.amountDue, status: invoicesTable.status, notes: invoicesTable.notes, createdAt: invoicesTable.createdAt, updatedAt: invoicesTable.updatedAt }).from(invoicesTable).leftJoin(partnersTable, eq(invoicesTable.partnerId, partnersTable.id)).where(whereClause).limit(limit).offset(offset).orderBy(invoicesTable.createdAt);
   const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(invoicesTable).where(whereClause);
   res.json({ data: data.map(serInvoice), total: count, page, limit });
 });
@@ -288,7 +290,7 @@ router.post("/invoices", requireAuth, async (req: Request, res: Response): Promi
   const info = await getUserCompanyInfo(req.user.id);
   if (!info) { if (!handleNoCompany(req, res)) res.status(403).json({ error: "No company membership" }); return; }
 
-  const { partnerId, subject, issueDate, dueDate, notes, items } = req.body;
+  const { partnerId, subject, issueDate, dueDate, currency, notes, items } = req.body;
   if (!items?.length) { res.status(400).json({ error: "items are required" }); return; }
 
   const year = new Date().getFullYear();
@@ -296,7 +298,7 @@ router.post("/invoices", requireAuth, async (req: Request, res: Response): Promi
   const invoiceNumber = `FAC-${year}-${String(cnt + 1).padStart(4, "0")}`;
   const { subtotal, taxAmount, total } = calcTotals(items);
 
-  const [invoice] = await db.insert(invoicesTable).values({ companyId: info.companyId, invoiceNumber, partnerId: partnerId ?? null, subject, issueDate: new Date(issueDate), dueDate: dueDate ? new Date(dueDate) : null, subtotal: String(subtotal), taxAmount: String(taxAmount), total: String(total), amountPaid: "0", amountDue: String(total), notes, createdBy: req.user.id }).returning();
+  const [invoice] = await db.insert(invoicesTable).values({ companyId: info.companyId, invoiceNumber, partnerId: partnerId ?? null, subject, issueDate: new Date(issueDate), dueDate: dueDate ? new Date(dueDate) : null, currency: currency ?? null, subtotal: String(subtotal), taxAmount: String(taxAmount), total: String(total), amountPaid: "0", amountDue: String(total), notes, createdBy: req.user.id }).returning();
   await db.insert(invoiceItemsTable).values(items.map((it: any) => {
     const sub = Number(it.quantity) * Number(it.unitPrice);
     const tax = sub * (Number(it.taxRate ?? 0) / 100);
@@ -314,7 +316,7 @@ router.get("/invoices/:id", requireAuth, async (req: Request, res: Response): Pr
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  const [invoice] = await db.select({ id: invoicesTable.id, companyId: invoicesTable.companyId, invoiceNumber: invoicesTable.invoiceNumber, partnerId: invoicesTable.partnerId, partnerName: partnersTable.name, subject: invoicesTable.subject, issueDate: invoicesTable.issueDate, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal, taxAmount: invoicesTable.taxAmount, total: invoicesTable.total, amountPaid: invoicesTable.amountPaid, amountDue: invoicesTable.amountDue, status: invoicesTable.status, notes: invoicesTable.notes, createdAt: invoicesTable.createdAt, updatedAt: invoicesTable.updatedAt }).from(invoicesTable).leftJoin(partnersTable, eq(invoicesTable.partnerId, partnersTable.id)).where(and(eq(invoicesTable.id, id), eq(invoicesTable.companyId, info.companyId))).limit(1);
+  const [invoice] = await db.select({ id: invoicesTable.id, companyId: invoicesTable.companyId, invoiceNumber: invoicesTable.invoiceNumber, partnerId: invoicesTable.partnerId, partnerName: partnersTable.name, subject: invoicesTable.subject, issueDate: invoicesTable.issueDate, dueDate: invoicesTable.dueDate, currency: invoicesTable.currency, subtotal: invoicesTable.subtotal, taxAmount: invoicesTable.taxAmount, total: invoicesTable.total, amountPaid: invoicesTable.amountPaid, amountDue: invoicesTable.amountDue, status: invoicesTable.status, notes: invoicesTable.notes, createdAt: invoicesTable.createdAt, updatedAt: invoicesTable.updatedAt }).from(invoicesTable).leftJoin(partnersTable, eq(invoicesTable.partnerId, partnersTable.id)).where(and(eq(invoicesTable.id, id), eq(invoicesTable.companyId, info.companyId))).limit(1);
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
 
   const items = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, id));
@@ -329,12 +331,13 @@ router.patch("/invoices/:id", requireAuth, async (req: Request, res: Response): 
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  const { partnerId, subject, issueDate, dueDate, notes, items } = req.body;
+  const { partnerId, subject, issueDate, dueDate, currency, notes, items } = req.body;
   let updates: any = { updatedBy: req.user.id };
   if (partnerId !== undefined) updates.partnerId = partnerId;
   if (subject !== undefined) updates.subject = subject;
   if (issueDate !== undefined) updates.issueDate = new Date(issueDate);
   if (dueDate !== undefined) updates.dueDate = dueDate ? new Date(dueDate) : null;
+  if (currency !== undefined) updates.currency = currency;
   if (notes !== undefined) updates.notes = notes;
 
   if (items?.length) {

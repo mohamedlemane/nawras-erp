@@ -642,6 +642,7 @@ export const ListQuotesResponse = zod.object({
       total: zod.number(),
       status: zod.string(),
       notes: zod.string().nullish(),
+      currency: zod.string().nullish(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -660,6 +661,7 @@ export const CreateQuoteBody = zod.object({
   issueDate: zod.string(),
   validUntil: zod.string().nullish(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   items: zod.array(
     zod.object({
       productId: zod.number().nullish(),
@@ -692,6 +694,7 @@ export const GetQuoteResponse = zod.object({
   total: zod.number(),
   status: zod.string(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -722,6 +725,7 @@ export const UpdateQuoteBody = zod.object({
   issueDate: zod.string().optional(),
   validUntil: zod.string().nullish(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   status: zod.string().optional(),
   items: zod
     .array(
@@ -750,6 +754,7 @@ export const UpdateQuoteResponse = zod.object({
   total: zod.number(),
   status: zod.string(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -787,6 +792,7 @@ export const ListProformasResponse = zod.object({
       total: zod.number(),
       status: zod.string(),
       notes: zod.string().nullish(),
+      currency: zod.string().nullish(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -805,6 +811,7 @@ export const CreateProformaBody = zod.object({
   issueDate: zod.string(),
   validUntil: zod.string().nullish(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   items: zod.array(
     zod.object({
       productId: zod.number().nullish(),
@@ -837,6 +844,7 @@ export const GetProformaResponse = zod.object({
   total: zod.number(),
   status: zod.string(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -867,6 +875,7 @@ export const UpdateProformaBody = zod.object({
   issueDate: zod.string().optional(),
   validUntil: zod.string().nullish(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   status: zod.string().optional(),
   items: zod
     .array(
@@ -895,6 +904,7 @@ export const UpdateProformaResponse = zod.object({
   total: zod.number(),
   status: zod.string(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -934,6 +944,7 @@ export const ListInvoicesResponse = zod.object({
       amountDue: zod.number(),
       status: zod.string(),
       notes: zod.string().nullish(),
+      currency: zod.string().nullish(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -952,6 +963,7 @@ export const CreateInvoiceBody = zod.object({
   issueDate: zod.string(),
   dueDate: zod.string().nullish(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   items: zod.array(
     zod.object({
       productId: zod.number().nullish(),
@@ -986,6 +998,7 @@ export const GetInvoiceResponse = zod.object({
   amountDue: zod.number(),
   status: zod.string(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -1028,6 +1041,7 @@ export const UpdateInvoiceBody = zod.object({
   issueDate: zod.string().optional(),
   dueDate: zod.string().nullish(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   items: zod
     .array(
       zod.object({
@@ -1057,6 +1071,7 @@ export const UpdateInvoiceResponse = zod.object({
   amountDue: zod.number(),
   status: zod.string(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1091,6 +1106,7 @@ export const ValidateInvoiceResponse = zod.object({
   amountDue: zod.number(),
   status: zod.string(),
   notes: zod.string().nullish(),
+  currency: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

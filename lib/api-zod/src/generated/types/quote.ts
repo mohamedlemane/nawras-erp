@@ -25,6 +25,8 @@ export interface Quote {
   status: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   createdAt: string;
   updatedAt: string;
 }

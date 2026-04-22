@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import ReactSelect from "react-select";
 import { rsClassNames, rsClassNamesCompact, rsPortalStyles } from "@/lib/rs-styles";
 import { useListProformas, useListPartners, useListProducts, createProforma } from "@workspace/api-client-react";
@@ -34,7 +35,7 @@ export default function ProformasList() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [form, setForm] = useState<CreateProformaBody>({
     partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'),
-    validUntil: null, notes: null, items: [emptyItem()],
+    validUntil: null, currency: null, notes: null, items: [emptyItem()],
   });
 
   const { data, isLoading } = useListProformas({ search: search || undefined, status: status !== "all" ? status : undefined } as any);
@@ -50,7 +51,7 @@ export default function ProformasList() {
   });
 
   const openCreate = () => {
-    setForm({ partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'), validUntil: null, notes: null, items: [emptyItem()] });
+    setForm({ partnerId: null, subject: null, issueDate: format(new Date(), 'yyyy-MM-dd'), validUntil: null, currency: null, notes: null, items: [emptyItem()] });
     setSheetOpen(true);
   };
 
@@ -150,6 +151,7 @@ export default function ProformasList() {
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Date d'émission *</Label><Input type="date" value={form.issueDate} onChange={e => setForm(f => ({ ...f, issueDate: e.target.value }))} required /></div>
               <div><Label>Valide jusqu'au</Label><Input type="date" value={form.validUntil ?? ""} onChange={e => setForm(f => ({ ...f, validUntil: e.target.value || null }))} /></div>
+              <CurrencySelect value={form.currency} onChange={code => setForm(f => ({ ...f, currency: code }))} />
             </div>
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-sm">

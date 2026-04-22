@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import { useParams, useLocation, Link } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import ReactSelect from "react-select";
@@ -36,7 +37,7 @@ export default function QuoteEdit() {
 
   const [form, setForm] = useState<UpdateQuoteBody>({
     partnerId: null, subject: null, issueDate: format(new Date(), "yyyy-MM-dd"),
-    validUntil: null, notes: null, items: [emptyItem()],
+    validUntil: null, currency: null, notes: null, items: [emptyItem()],
   });
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function QuoteEdit() {
       subject: quote.subject ?? null,
       issueDate: format(new Date(quote.issueDate), "yyyy-MM-dd"),
       validUntil: quote.validUntil ? format(new Date(quote.validUntil), "yyyy-MM-dd") : null,
+      currency: quote.currency ?? null,
       notes: quote.notes ?? null,
       items: (quote.items ?? []).map((it) => ({
         productId: it.productId ?? null,
@@ -154,6 +156,9 @@ export default function QuoteEdit() {
               <div>
                 <Label>Valide jusqu'au</Label>
                 <Input type="date" value={form.validUntil ?? ""} onChange={(e) => setForm((f) => ({ ...f, validUntil: e.target.value || null }))} />
+              </div>
+              <div>
+                <CurrencySelect value={form.currency} onChange={(code) => setForm((f) => ({ ...f, currency: code }))} />
               </div>
             </div>
           </CardContent>

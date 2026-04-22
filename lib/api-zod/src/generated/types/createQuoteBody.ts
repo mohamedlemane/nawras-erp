@@ -17,5 +17,7 @@ export interface CreateQuoteBody {
   validUntil?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   items: DocumentItemInput[];
 }

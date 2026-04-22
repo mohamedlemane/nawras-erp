@@ -44,7 +44,7 @@ export default function ProformaDetail() {
     },
   });
 
-  const { formatCurrency, amountInWords, currency } = useCurrency();
+  const { formatCurrency, amountInWords, currency } = useCurrency(proforma?.currency);
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   if (!proforma) return <div className="p-8 text-center text-muted-foreground">Proforma introuvable</div>;
@@ -56,6 +56,7 @@ export default function ProformaDetail() {
         partnerId: proforma.partnerId ?? null,
         subject: proforma.subject ?? null,
         issueDate: new Date().toISOString().slice(0, 10),
+        currency: proforma.currency ?? null,
         notes: proforma.notes ?? null,
         items: (proforma.items ?? []).map((item) => ({
           productId: item.productId ?? null,

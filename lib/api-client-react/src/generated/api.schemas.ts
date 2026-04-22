@@ -413,6 +413,8 @@ export interface Quote {
   status: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -436,6 +438,8 @@ export interface QuoteWithItems {
   status: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   items: DocumentItem[];
   createdAt: string;
   updatedAt: string;
@@ -458,6 +462,8 @@ export interface CreateQuoteBody {
   validUntil?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   items: DocumentItemInput[];
 }
 
@@ -471,6 +477,8 @@ export interface UpdateQuoteBody {
   validUntil?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   status?: string;
   items?: DocumentItemInput[];
 }
@@ -494,6 +502,8 @@ export interface Proforma {
   status: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -517,6 +527,8 @@ export interface ProformaWithItems {
   status: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   items: DocumentItem[];
   createdAt: string;
   updatedAt: string;
@@ -539,6 +551,8 @@ export interface CreateProformaBody {
   validUntil?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   items: DocumentItemInput[];
 }
 
@@ -552,6 +566,8 @@ export interface UpdateProformaBody {
   validUntil?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   status?: string;
   items?: DocumentItemInput[];
 }
@@ -577,6 +593,8 @@ export interface Invoice {
   status: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -615,6 +633,8 @@ export interface InvoiceWithDetails {
   status: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   items: DocumentItem[];
   payments: Payment[];
   createdAt: string;
@@ -638,6 +658,8 @@ export interface CreateInvoiceBody {
   dueDate?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   items: DocumentItemInput[];
 }
 
@@ -651,6 +673,8 @@ export interface UpdateInvoiceBody {
   dueDate?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   items?: DocumentItemInput[];
 }
 

@@ -73,7 +73,7 @@ export default function QuoteDetail() {
     onError: (err) => handleApiError(err, "Suppression impossible"),
   });
 
-  const { formatCurrency, amountInWords, currency } = useCurrency();
+  const { formatCurrency, amountInWords, currency } = useCurrency(quote?.currency);
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement...</div>;
   if (!quote) return <div className="p-8 text-center text-muted-foreground">Devis introuvable</div>;
@@ -85,6 +85,7 @@ export default function QuoteDetail() {
         partnerId: quote.partnerId ?? null,
         subject: quote.subject ?? null,
         issueDate: new Date().toISOString().slice(0, 10),
+        currency: quote.currency ?? null,
         notes: quote.notes ?? null,
         items: (quote.items ?? []).map((item) => ({
           productId: item.productId ?? null,
@@ -114,6 +115,7 @@ export default function QuoteDetail() {
         partnerId: quote.partnerId ?? null,
         subject: quote.subject ?? null,
         issueDate: new Date().toISOString().slice(0, 10),
+        currency: quote.currency ?? null,
         notes: quote.notes ?? null,
         items: (quote.items ?? []).map((item) => ({
           productId: item.productId ?? null,

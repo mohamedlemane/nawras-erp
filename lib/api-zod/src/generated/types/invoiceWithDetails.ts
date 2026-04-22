@@ -29,6 +29,8 @@ export interface InvoiceWithDetails {
   status: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  currency?: string | null;
   items: DocumentItem[];
   payments: Payment[];
   createdAt: string;

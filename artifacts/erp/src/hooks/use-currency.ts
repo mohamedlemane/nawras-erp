@@ -2,9 +2,10 @@ import { useGetMyCompany } from "@workspace/api-client-react";
 import { getCurrency, DEFAULT_CURRENCY, type CurrencyDef } from "@/lib/currencies";
 import { numberToWords } from "@/lib/number-to-words";
 
-export function useCurrency() {
+export function useCurrency(overrideCode?: string | null) {
   const { data: company } = useGetMyCompany();
-  const currency: CurrencyDef = company?.currency ? getCurrency(company.currency) : DEFAULT_CURRENCY;
+  const baseCode = overrideCode ?? company?.currency ?? null;
+  const currency: CurrencyDef = baseCode ? getCurrency(baseCode) : DEFAULT_CURRENCY;
 
   const formatCurrency = (val: number | string | null | undefined) => {
     const n = typeof val === "string" ? Number(val) : (val ?? 0);

@@ -2159,6 +2159,8 @@ components:
           type: string
         notes:
           type: ["string", "null"]
+        currency:
+          type: ["string", "null"]
         createdAt:
           type: string
         updatedAt:
@@ -2203,6 +2205,8 @@ components:
         status:
           type: string
         notes:
+          type: ["string", "null"]
+        currency:
           type: ["string", "null"]
         items:
           type: array
@@ -2257,6 +2261,8 @@ components:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
+        currency:
+          type: ["string", "null"]
         items:
           type: array
           items:
@@ -2277,6 +2283,8 @@ components:
         validUntil:
           type: ["string", "null"]
         notes:
+          type: ["string", "null"]
+        currency:
           type: ["string", "null"]
         status:
           type: string
@@ -2313,6 +2321,8 @@ components:
         status:
           type: string
         notes:
+          type: ["string", "null"]
+        currency:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -2358,6 +2368,8 @@ components:
         status:
           type: string
         notes:
+          type: ["string", "null"]
+        currency:
           type: ["string", "null"]
         items:
           type: array
@@ -2412,6 +2424,8 @@ components:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
+        currency:
+          type: ["string", "null"]
         items:
           type: array
           items:
@@ -2432,6 +2446,8 @@ components:
         validUntil:
           type: ["string", "null"]
         notes:
+          type: ["string", "null"]
+        currency:
           type: ["string", "null"]
         status:
           type: string
@@ -2472,6 +2488,8 @@ components:
         status:
           type: string
         notes:
+          type: ["string", "null"]
+        currency:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -2523,6 +2541,8 @@ components:
         status:
           type: string
         notes:
+          type: ["string", "null"]
+        currency:
           type: ["string", "null"]
         items:
           type: array
@@ -2584,6 +2604,8 @@ components:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
+        currency:
+          type: ["string", "null"]
         items:
           type: array
           items:
@@ -2604,6 +2626,8 @@ components:
         dueDate:
           type: ["string", "null"]
         notes:
+          type: ["string", "null"]
+        currency:
           type: ["string", "null"]
         items:
           type: array
