@@ -1,6 +1,7 @@
-import { CURRENCIES } from "@/lib/currencies";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CURRENCIES, type CurrencyDef } from "@/lib/currencies";
 import { Label } from "@/components/ui/label";
+import ReactSelect from "react-select";
+import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
 import { useGetMyCompany } from "@workspace/api-client-react";
 
 interface Props {
@@ -9,28 +10,76 @@ interface Props {
   label?: string;
 }
 
+interface Opt {
+  value: string;
+  label: string;
+  currency: CurrencyDef | null;
+  isDefault?: boolean;
+}
+
+const formatOption = (opt: Opt) => (
+  <div className="flex items-center gap-2">
+    <span className="text-base leading-none">
+      {opt.isDefault ? "⭐" : opt.currency?.flag}
+    </span>
+    <span className="font-medium">
+      {opt.isDefault ? "Par défaut" : opt.currency?.code}
+    </span>
+    <span className="text-muted-foreground text-xs truncate">
+      {opt.isDefault
+        ? `(${opt.currency?.code})`
+        : `${opt.currency?.label} — ${opt.currency?.country}`}
+    </span>
+  </div>
+);
+
 export function CurrencySelect({ value, onChange, label = "Monnaie" }: Props) {
   const { data: company } = useGetMyCompany();
-  const defaultCode = company?.currency ?? "MRU";
-  const current = value ?? "__default__";
+  const defaultCode = (company as any)?.currency ?? "MRU";
+  const defaultCur = CURRENCIES.find((c) => c.code === defaultCode) ?? CURRENCIES[0];
+
+  const defaultOpt: Opt = {
+    value: "__default__",
+    label: `Par défaut (${defaultCode})`,
+    currency: defaultCur,
+    isDefault: true,
+  };
+  const options: Opt[] = [
+    defaultOpt,
+    ...CURRENCIES.map((c) => ({
+      value: c.code,
+      label: `${c.code} ${c.label} ${c.country}`,
+      currency: c,
+    })),
+  ];
+
+  const selected =
+    !value
+      ? defaultOpt
+      : options.find((o) => o.value === value) ?? defaultOpt;
 
   return (
     <div>
       <Label>{label}</Label>
-      <Select
-        value={current}
-        onValueChange={(v) => onChange(v === "__default__" ? null : v)}
-      >
-        <SelectTrigger><SelectValue /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="__default__">Par défaut ({defaultCode})</SelectItem>
-          {CURRENCIES.map((c) => (
-            <SelectItem key={c.code} value={c.code}>
-              {c.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <ReactSelect
+        unstyled
+        classNames={rsClassNames}
+        styles={rsPortalStyles}
+        menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+        options={options}
+        value={selected}
+        onChange={(opt) =>
+          onChange(opt && opt.value !== "__default__" ? opt.value : null)
+        }
+        formatOptionLabel={formatOption}
+        filterOption={(opt, input) => {
+          if (!input) return true;
+          const q = input.toLowerCase();
+          return (opt.data.label ?? "").toLowerCase().includes(q);
+        }}
+        placeholder="Choisir une monnaie…"
+        isSearchable
+      />
     </div>
   );
 }
