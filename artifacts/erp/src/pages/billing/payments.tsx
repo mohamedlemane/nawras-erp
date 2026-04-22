@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useCurrency } from "@/hooks/use-currency";
+import { formatAmount } from "@/lib/currencies";
 import ReactSelect from "react-select";
-import { rsClassNames, rsPortalStyles } from "@/lib/rs-styles";
+import { rsClassNames } from "@/lib/rs-styles";
 import { useListPayments, useListInvoices, createPayment } from "@workspace/api-client-react";
 import type { CreatePaymentBody, CreatePaymentBodyPaymentMethod } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -95,12 +96,14 @@ export default function PaymentsList() {
     }));
   };
 
+  const invCurrency = selectedInvoice?.currency ?? null;
+
   const handleAmountChange = (v: string) => {
     setAmountError(null);
     const num = Number(v);
     if (selectedInvoice && num > selectedInvoice.amountDue) {
       setAmountError(
-        `Le montant ne peut pas dépasser le restant dû (${formatCurrency(selectedInvoice.amountDue)})`
+        `Le montant ne peut pas dépasser le restant dû (${formatAmount(selectedInvoice.amountDue, invCurrency)})`
       );
     }
     setForm((f) => ({ ...f, amount: num }));
@@ -110,7 +113,7 @@ export default function PaymentsList() {
     e.preventDefault();
     if (selectedInvoice && form.amount > selectedInvoice.amountDue) {
       setAmountError(
-        `Le montant ne peut pas dépasser le restant dû (${formatCurrency(selectedInvoice.amountDue)})`
+        `Le montant ne peut pas dépasser le restant dû (${formatAmount(selectedInvoice.amountDue, invCurrency)})`
       );
       return;
     }
@@ -164,11 +167,11 @@ export default function PaymentsList() {
                 data.data.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell>{format(new Date(payment.paymentDate), "dd/MM/yyyy")}</TableCell>
-                    <TableCell className="font-medium">Facture #{payment.invoiceId}</TableCell>
+                    <TableCell className="font-medium font-mono">{(payment as any).invoiceNumber ?? `#${payment.invoiceId}`}</TableCell>
                     <TableCell>{methodLabels[payment.paymentMethod] || payment.paymentMethod}</TableCell>
                     <TableCell className="text-muted-foreground">{payment.reference || "—"}</TableCell>
                     <TableCell className="text-right font-medium text-green-600">
-                      {formatCurrency(payment.amount)}
+                      {formatAmount(payment.amount, (payment as any).invoiceCurrency ?? null)}
                     </TableCell>
                   </TableRow>
                 ))
@@ -189,24 +192,25 @@ export default function PaymentsList() {
               <ReactSelect
                 unstyled
                 classNames={rsClassNames}
-                styles={rsPortalStyles}
+                styles={{ menu: (base) => ({ ...base, zIndex: 9999 }) }}
+                menuPosition="fixed"
                 placeholder="Rechercher une facture impayée..."
                 noOptionsMessage={() => unpaidInvoices.length === 0 ? "Aucune facture impayée" : "Aucun résultat"}
                 options={unpaidInvoices.map(inv => ({
                   value: inv.id,
-                  label: `${inv.invoiceNumber} — ${inv.partnerName || "?"} (${formatCurrency(inv.amountDue)} restant)`,
+                  label: `${inv.invoiceNumber} — ${inv.partnerName || "?"} (${formatAmount(inv.amountDue, inv.currency)} restant)`,
                 }))}
-                value={form.invoiceId ? { value: form.invoiceId, label: (() => { const inv = unpaidInvoices.find(i => i.id === form.invoiceId); return inv ? `${inv.invoiceNumber} — ${inv.partnerName || "?"} (${formatCurrency(inv.amountDue)} restant)` : ""; })() } : null}
+                value={form.invoiceId ? { value: form.invoiceId, label: (() => { const inv = unpaidInvoices.find(i => i.id === form.invoiceId); return inv ? `${inv.invoiceNumber} — ${inv.partnerName || "?"} (${formatAmount(inv.amountDue, inv.currency)} restant)` : ""; })() } : null}
                 onChange={opt => handleInvoiceChange(opt ? opt.value : null)}
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <Label>Montant (MRU) *</Label>
+                <Label>Montant {invCurrency ? `(${invCurrency})` : ""} *</Label>
                 {selectedInvoice && (
                   <span className="text-xs text-muted-foreground">
-                    Max : {formatCurrency(selectedInvoice.amountDue)}
+                    Max : {formatAmount(selectedInvoice.amountDue, invCurrency)}
                   </span>
                 )}
               </div>

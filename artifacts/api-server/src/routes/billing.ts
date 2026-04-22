@@ -417,7 +417,12 @@ router.get("/payments", requireAuth, async (req: Request, res: Response): Promis
   if (invoiceId) conditions.push(eq(paymentsTable.invoiceId, invoiceId));
   const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
 
-  const data = await db.select().from(paymentsTable).where(whereClause).limit(limit).offset(offset).orderBy(paymentsTable.paymentDate);
+  const data = await db.select({
+    id: paymentsTable.id, companyId: paymentsTable.companyId, invoiceId: paymentsTable.invoiceId,
+    amount: paymentsTable.amount, paymentDate: paymentsTable.paymentDate, paymentMethod: paymentsTable.paymentMethod,
+    reference: paymentsTable.reference, notes: paymentsTable.notes, createdBy: paymentsTable.createdBy, createdAt: paymentsTable.createdAt,
+    invoiceNumber: invoicesTable.invoiceNumber, invoiceCurrency: invoicesTable.currency,
+  }).from(paymentsTable).leftJoin(invoicesTable, eq(paymentsTable.invoiceId, invoicesTable.id)).where(whereClause).limit(limit).offset(offset).orderBy(paymentsTable.paymentDate);
   const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(paymentsTable).where(whereClause);
   res.json({ data: data.map(serPayment), total: count, page, limit });
 });
@@ -436,7 +441,8 @@ router.post("/payments", requireAuth, async (req: Request, res: Response): Promi
   const amountDue = Number(invoice.amountDue);
   if (Number(amount) <= 0) { res.status(400).json({ error: "Le montant doit être supérieur à 0" }); return; }
   if (Number(amount) > amountDue) {
-    res.status(400).json({ error: `Le montant saisi (${Number(amount).toFixed(2)} MRU) dépasse le restant dû (${amountDue.toFixed(2)} MRU)` });
+    const cur = invoice.currency ?? "MRU";
+    res.status(400).json({ error: `Le montant saisi (${Number(amount).toFixed(2)} ${cur}) dépasse le restant dû (${amountDue.toFixed(2)} ${cur})` });
     return;
   }
 
