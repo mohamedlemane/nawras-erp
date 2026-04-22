@@ -159,7 +159,7 @@ export default function Dashboard() {
             icon={ThumbsUp}
             color="text-green-600"
             sub="Devis confirmés par le client"
-            href="/billing/quotes"
+            href="/billing/quotes?status=accepted"
           />
           <StatCard
             title="Devis Refusés"
@@ -167,7 +167,7 @@ export default function Dashboard() {
             icon={ThumbsDown}
             color="text-destructive"
             sub="Devis rejetés par le client"
-            href="/billing/quotes"
+            href="/billing/quotes?status=rejected"
           />
           <StatCard
             title="Devis en Attente"
@@ -175,7 +175,7 @@ export default function Dashboard() {
             icon={Clock}
             color="text-amber-600"
             sub="Brouillons non encore envoyés"
-            href="/billing/quotes"
+            href="/billing/quotes?status=draft"
           />
           <StatCard
             title="Factures Impayées"

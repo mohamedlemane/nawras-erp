@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { CreateQuoteBody, DocumentItemInput } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,8 +36,10 @@ export default function QuotesList() {
   const { currency: defaultCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const searchString = useSearch();
+  const urlStatus = new URLSearchParams(searchString).get("status") ?? "all";
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string>("all");
+  const [status, setStatus] = useState<string>(urlStatus);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [formCurrency, setFormCurrency] = useState<string>(defaultCurrency.code);
   const [form, setForm] = useState<CreateQuoteBody>({
