@@ -171,7 +171,15 @@ export default function QuotesList() {
       </Card>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="sm:max-w-2xl overflow-y-auto">
+        <SheetContent
+          className="sm:max-w-2xl overflow-y-auto"
+          onPointerDownOutside={(e) => {
+            if ((e.target as HTMLElement).closest("[class*='react-select'],[data-floating-ui-portal],[id*='react-select']")) e.preventDefault();
+          }}
+          onInteractOutside={(e) => {
+            if ((e.target as HTMLElement).closest("[class*='react-select'],[data-floating-ui-portal],[id*='react-select']")) e.preventDefault();
+          }}
+        >
           <SheetHeader><SheetTitle>Nouveau devis</SheetTitle></SheetHeader>
           <form onSubmit={e => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
