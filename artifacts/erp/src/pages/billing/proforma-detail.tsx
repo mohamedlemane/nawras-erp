@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PrintDocument } from "@/components/print/PrintDocument";
 import { ArrowLeft, Printer, FileSignature, Send, CheckCircle, XCircle, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
+import { numberToWordsMRU } from "@/lib/number-to-words";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Brouillon",
@@ -200,6 +201,14 @@ export default function ProformaDetail() {
                   <div className="flex justify-between text-sm"><span>Sous-total HT</span><span>{formatCurrency(proforma.subtotal)}</span></div>
                   <div className="flex justify-between text-sm"><span>TVA</span><span>{formatCurrency(proforma.taxAmount)}</span></div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t"><span>Total TTC</span><span>{formatCurrency(proforma.total)}</span></div>
+                </div>
+              </div>
+              <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-relaxed">
+                <span className="font-semibold">Arrêtée la présente facture proforma à la somme de :</span>{" "}
+                <span className="font-bold uppercase text-blue-700">{numberToWordsMRU(proforma.total)}</span>
+              </div>
+              <div className="hidden">
+                <div>
                 </div>
               </div>
             </CardContent>

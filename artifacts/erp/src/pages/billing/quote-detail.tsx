@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PrintDocument } from "@/components/print/PrintDocument";
 import { ArrowLeft, Printer, FileCheck, FileSignature, Send, CheckCircle, XCircle, RotateCcw, Trash2, Pencil } from "lucide-react";
 import { format } from "date-fns";
+import { numberToWordsMRU } from "@/lib/number-to-words";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -292,6 +293,10 @@ export default function QuoteDetail() {
                   <div className="flex justify-between text-sm"><span>TVA</span><span>{formatCurrency(quote.taxAmount)}</span></div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t"><span>Total TTC</span><span>{formatCurrency(quote.total)}</span></div>
                 </div>
+              </div>
+              <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-relaxed">
+                <span className="font-semibold">Arrêté le présent devis à la somme de :</span>{" "}
+                <span className="font-bold uppercase text-blue-700">{numberToWordsMRU(quote.total)}</span>
               </div>
             </CardContent>
           </Card>
