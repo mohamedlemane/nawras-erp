@@ -134,8 +134,8 @@ export function Sidebar() {
       <div className="flex h-16 items-center px-4 border-b border-sidebar-border">
         <div className="flex flex-col gap-0.5">
           <img
-            src={`${BASE}/logo.png`}
-            alt="CTA-ONE"
+            src={`${BASE}/logo.svg`}
+            alt="CTA-One"
             className="h-10 w-auto object-contain"
           />
           {user?.isSuperAdmin && (

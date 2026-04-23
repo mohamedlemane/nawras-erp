@@ -119,7 +119,7 @@ export default function Login() {
             {isCompanyLogin && company.logo ? (
               <img src={company.logo} alt={company.name} className="h-14 w-auto object-contain" />
             ) : (
-              <img src={`${BASE}/logo.png`} alt="CTA-ONE" className="h-16 w-auto object-contain" />
+              <img src={`${BASE}/logo.svg`} alt="CTA-One" className="h-16 w-auto object-contain" />
             )}
           </div>
           <div>

@@ -25,10 +25,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto p-8 max-w-7xl">
+      <main className="flex-1 overflow-y-auto flex flex-col">
+        <div className="container mx-auto p-8 max-w-7xl flex-1">
           {children}
         </div>
+        <footer className="border-t border-border/40 py-3 px-8 text-center text-xs text-muted-foreground bg-background">
+          © {new Date().getFullYear()} CTA-One — Tous droits réservés
+        </footer>
       </main>
     </div>
   );
