@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Plus, Search, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +39,8 @@ export default function QuotesList() {
   const { toast } = useToast();
   const searchString = useSearch();
   const urlStatus = new URLSearchParams(searchString).get("status") ?? "all";
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>(urlStatus);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -48,6 +51,9 @@ export default function QuotesList() {
   });
 
   const { data, isLoading } = useListQuotes({ search: search || undefined, status: status !== "all" ? status : undefined } as any);
+  const rows = data?.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const { data: partnersData } = useListPartners();
   const { data: productsData } = useListProducts();
 
@@ -115,9 +121,9 @@ export default function QuotesList() {
           <div className="flex gap-4 items-center">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+              <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             </div>
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status} onValueChange={v => { setStatus(v); setPage(1); }}>
               <SelectTrigger className="w-[180px]"><SelectValue placeholder="Statut" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous</SelectItem>
@@ -144,7 +150,7 @@ export default function QuotesList() {
                 <TableRow><TableCell colSpan={7} className="text-center h-24">Chargement...</TableCell></TableRow>
               ) : !data?.data?.length ? (
                 <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Aucun devis trouvé</TableCell></TableRow>
-              ) : data.data.map(quote => (
+              ) : paginated.map(quote => (
                 <TableRow key={quote.id}>
                   <TableCell className="font-medium font-mono">{quote.quoteNumber}</TableCell>
                   <TableCell>{quote.partnerName || '-'}</TableCell>
@@ -172,6 +178,7 @@ export default function QuotesList() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </CardContent>
       </Card>
 

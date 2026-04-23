@@ -17,6 +17,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Plus, AlertCircle, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +56,8 @@ export default function PaymentsList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
   const [createAmountError, setCreateAmountError] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<CreatePaymentBody>({
@@ -74,6 +77,9 @@ export default function PaymentsList() {
   const [deletePaymentId, setDeletePaymentId] = useState<number | null>(null);
 
   const { data, isLoading } = useListPayments();
+  const allPayments = (data?.data as AnyPayment[]) ?? [];
+  const totalPages = Math.max(1, Math.ceil(allPayments.length / PAGE_SIZE));
+  const paginated = allPayments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const { data: invoicesData } = useListInvoices({ limit: 200 } as any);
 
   const unpaidInvoices = invoicesData?.data?.filter((inv) => inv.amountDue > 0) || [];
@@ -208,7 +214,7 @@ export default function PaymentsList() {
     updateMutation.mutate({ id: editingPayment.id, data: editForm });
   };
 
-  const deleteTarget = deletePaymentId ? (data?.data as AnyPayment[])?.find(p => p.id === deletePaymentId) : null;
+  const deleteTarget = deletePaymentId ? allPayments.find(p => p.id === deletePaymentId) : null;
 
   return (
     <div className="space-y-6">
@@ -242,7 +248,7 @@ export default function PaymentsList() {
               ) : !(data?.data as AnyPayment[])?.length ? (
                 <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Aucun paiement trouvé</TableCell></TableRow>
               ) : (
-                (data!.data as AnyPayment[]).map((payment) => (
+                paginated.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell>{format(new Date(payment.paymentDate), "dd/MM/yyyy")}</TableCell>
                     <TableCell className="font-mono font-medium">{payment.invoiceNumber ?? `#${payment.invoiceId}`}</TableCell>
@@ -271,6 +277,7 @@ export default function PaymentsList() {
               )}
             </TableBody>
           </Table>
+          <TablePagination page={page} totalPages={totalPages} total={allPayments.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </CardContent>
       </Card>
 

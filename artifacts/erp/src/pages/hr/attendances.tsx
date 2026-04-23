@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Plus, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -36,8 +37,13 @@ export default function AttendancesList() {
     checkIn: null, checkOut: null, status: 'present' as CreateAttendanceBodyStatus, notes: null,
   });
 
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const { data, isLoading } = useListAttendances({ date: dateStr } as any);
   const { data: employeesData } = useListEmployees();
+  const rows = data?.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/attendances"] });
 
@@ -103,7 +109,7 @@ export default function AttendancesList() {
                 <TableRow><TableCell colSpan={6} className="text-center h-24">Chargement...</TableCell></TableRow>
               ) : !data?.data?.length ? (
                 <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Aucune présence pour cette date</TableCell></TableRow>
-              ) : data.data.map(att => (
+              ) : paginated.map(att => (
                 <TableRow key={att.id}>
                   <TableCell className="font-medium">{att.employeeName}</TableCell>
                   <TableCell>{format(new Date(att.date), 'dd/MM/yyyy')}</TableCell>
@@ -117,6 +123,7 @@ export default function AttendancesList() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </CardContent>
       </Card>
 

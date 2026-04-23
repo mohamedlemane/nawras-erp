@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Plus, Pencil, Trash2, Search, TrendingDown, CalendarDays, Receipt, Filter, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -68,6 +69,8 @@ export default function Expenses() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<Expense | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -114,6 +117,8 @@ export default function Expenses() {
   }, [data, filterStatus, search]);
 
   const totalFiltered = expenses.reduce((s, e) => s + Number(e.amount), 0);
+  const totalPages = Math.max(1, Math.ceil(expenses.length / PAGE_SIZE));
+  const paginated = expenses.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const createMutation = useMutation({
     mutationFn: (body: typeof EMPTY_FORM) => fetch(`${BASE}/api/expenses`, {
@@ -255,7 +260,7 @@ export default function Expenses() {
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-8" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-8" placeholder="Rechercher..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         </div>
         <div className="w-56">
           <ReactSelect
@@ -263,10 +268,10 @@ export default function Expenses() {
             isClearable placeholder="Tous les types..."
             options={typeOptions}
             value={filterType ? typeOptions.find(o => o.value === filterType) ?? null : null}
-            onChange={opt => setFilterType(opt ? opt.value : null)}
+            onChange={opt => { setFilterType(opt ? opt.value : null); setPage(1); }}
           />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); setPage(1); }}>
           <SelectTrigger className="w-40">
             <Filter className="w-3 h-3 mr-1 text-muted-foreground" />
             <SelectValue />
@@ -301,7 +306,7 @@ export default function Expenses() {
               {!isLoading && expenses.length === 0 && (
                 <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Aucune dépense trouvée</TableCell></TableRow>
               )}
-              {expenses.map(expense => (
+              {paginated.map(expense => (
                 <TableRow key={expense.id} className="hover:bg-muted/30">
                   <TableCell className="text-sm">
                     {format(new Date(expense.expenseDate), "dd MMM yyyy", { locale: fr })}
@@ -353,6 +358,7 @@ export default function Expenses() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination page={page} totalPages={totalPages} total={expenses.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </CardContent>
       </Card>
 

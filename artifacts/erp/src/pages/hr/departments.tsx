@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
@@ -16,7 +17,12 @@ import { useToast } from "@/hooks/use-toast";
 export default function DepartmentsList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const { data: departments, isLoading } = useListDepartments();
+  const rows = departments ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<Department | null>(null);
@@ -93,7 +99,7 @@ export default function DepartmentsList() {
               ) : !departments?.length ? (
                 <TableRow><TableCell colSpan={4} className="text-center h-24 text-muted-foreground">Aucun département</TableCell></TableRow>
               ) : (
-                departments.map(dept => (
+                paginated.map(dept => (
                   <TableRow key={dept.id}>
                     <TableCell className="font-medium">{dept.name}</TableCell>
                     <TableCell>{dept.description || '-'}</TableCell>
@@ -107,6 +113,7 @@ export default function DepartmentsList() {
               )}
             </TableBody>
           </Table>
+          <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </CardContent>
       </Card>
 

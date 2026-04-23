@@ -127,3 +127,21 @@ const createMutation = useMutation({
 ```
 
 Currency: MRU using `new Intl.NumberFormat('fr-MR', { style: 'currency', currency: 'MRU' })`
+
+## Pagination
+
+All list tables use client-side pagination via the reusable component `artifacts/erp/src/components/ui/table-pagination.tsx`.
+
+Pattern (10 rows per page):
+```tsx
+const PAGE_SIZE = 10;
+const [page, setPage] = useState(1);
+const rows = data?.data ?? [];
+const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+// Reset page on filter/search change: setPage(1)
+// Render: paginated.map(...) instead of rows.map(...)
+// After </Table>: <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+```
+
+Pages paginated: billing/partners, billing/products, billing/invoices, billing/payments, billing/quotes, billing/proformas, hr/employees, hr/leaves, hr/departments, hr/positions, hr/contracts, hr/attendances, hr/documents, expenses/expenses.

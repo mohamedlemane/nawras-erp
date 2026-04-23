@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Plus, Search, Eye, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,6 +24,8 @@ const emptyForm = (): CreatePartnerBody => ({
 export default function PartnersList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [type, setType] = useState<string>("all");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -31,6 +34,9 @@ export default function PartnersList() {
   const [form, setForm] = useState<CreatePartnerBody>(emptyForm());
 
   const { data, isLoading } = useListPartners({ search: search || undefined, type: type !== "all" ? type : undefined } as any);
+  const rows = data?.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/partners"] });
 
@@ -88,9 +94,9 @@ export default function PartnersList() {
           <div className="flex gap-4 items-center">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+              <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             </div>
-            <Select value={type} onValueChange={setType}>
+            <Select value={type} onValueChange={v => { setType(v); setPage(1); }}>
               <SelectTrigger className="w-[180px]"><SelectValue placeholder="Type" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les types</SelectItem>
@@ -118,7 +124,7 @@ export default function PartnersList() {
                 <TableRow><TableCell colSpan={6} className="text-center h-24">Chargement...</TableCell></TableRow>
               ) : !data?.data?.length ? (
                 <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Aucun partenaire trouvé</TableCell></TableRow>
-              ) : data.data.map(partner => (
+              ) : paginated.map(partner => (
                 <TableRow key={partner.id}>
                   <TableCell className="font-medium">{partner.name}</TableCell>
                   <TableCell><span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${typeBadge(partner.type)}`}>{typeLabel(partner.type)}</span></TableCell>
@@ -136,6 +142,7 @@ export default function PartnersList() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </CardContent>
       </Card>
 

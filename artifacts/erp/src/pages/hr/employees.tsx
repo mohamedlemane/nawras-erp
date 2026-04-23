@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -35,6 +36,8 @@ const emptyForm = (): CreateEmployeeBody & { nni: string; employeeCode: string }
 export default function EmployeesList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [onLeaveFilter, setOnLeaveFilter] = useState<"all" | "yes" | "no">("all");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -54,6 +57,9 @@ export default function EmployeesList() {
       return onLeaveFilter === "yes" ? isOnLeave : !isOnLeave;
     }),
   } : rawData;
+  const rows = data?.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
 
@@ -122,9 +128,9 @@ export default function EmployeesList() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Rechercher un employé..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+              <Input placeholder="Rechercher un employé..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             </div>
-            <Select value={onLeaveFilter} onValueChange={v => setOnLeaveFilter(v as "all" | "yes" | "no")}>
+            <Select value={onLeaveFilter} onValueChange={v => { setOnLeaveFilter(v as "all" | "yes" | "no"); setPage(1); }}>
               <SelectTrigger className="w-44">
                 <SelectValue placeholder="En congé" />
               </SelectTrigger>
@@ -155,7 +161,7 @@ export default function EmployeesList() {
                 <TableRow><TableCell colSpan={8} className="text-center h-24">Chargement...</TableCell></TableRow>
               ) : !data?.data?.length ? (
                 <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">Aucun employé trouvé</TableCell></TableRow>
-              ) : data.data.map(emp => {
+              ) : paginated.map(emp => {
                 const isOnLeave = !!(emp as any).onLeave;
                 const isTerminated = emp.employmentStatus === 'terminated';
                 return (
@@ -218,6 +224,7 @@ export default function EmployeesList() {
               })}
             </TableBody>
           </Table>
+          <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </CardContent>
       </Card>
 

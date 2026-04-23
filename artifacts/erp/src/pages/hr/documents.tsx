@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Upload, FileText, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -25,8 +26,13 @@ export default function EmployeeDocumentsList() {
     employeeId: 0, title: "", fileUrl: null, documentType: 'other' as CreateEmployeeDocumentBodyDocumentType,
   });
 
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const { data, isLoading } = useListEmployeeDocuments();
   const { data: employeesData } = useListEmployees();
+  const rows = data?.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/employee-documents"] });
 
@@ -63,7 +69,7 @@ export default function EmployeeDocumentsList() {
               <TableRow><TableCell colSpan={4} className="text-center h-24">Chargement...</TableCell></TableRow>
             ) : !data?.data?.length ? (
               <TableRow><TableCell colSpan={4} className="text-center h-24 text-muted-foreground">Aucun document trouvé</TableCell></TableRow>
-            ) : data.data.map(doc => (
+            ) : paginated.map(doc => (
               <TableRow key={doc.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-muted-foreground" />{doc.title}</div>
@@ -81,6 +87,7 @@ export default function EmployeeDocumentsList() {
             ))}
           </TableBody>
         </Table>
+        <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </CardContent></Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

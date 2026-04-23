@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Plus, Search, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +36,8 @@ export default function InvoicesList() {
   const { currency: defaultCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -45,6 +48,9 @@ export default function InvoicesList() {
   });
 
   const { data, isLoading } = useListInvoices({ search: search || undefined, status: status !== "all" ? status : undefined } as any);
+  const rows = data?.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const { data: partnersData } = useListPartners();
   const { data: productsData } = useListProducts();
 
@@ -93,9 +99,9 @@ export default function InvoicesList() {
           <div className="flex gap-4 items-center">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Rechercher par n° ou client..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+              <Input placeholder="Rechercher par n° ou client..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             </div>
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status} onValueChange={v => { setStatus(v); setPage(1); }}>
               <SelectTrigger className="w-[200px]"><SelectValue placeholder="Statut" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les statuts</SelectItem>
@@ -123,7 +129,7 @@ export default function InvoicesList() {
                 <TableRow><TableCell colSpan={8} className="text-center h-24">Chargement...</TableCell></TableRow>
               ) : !data?.data?.length ? (
                 <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">Aucune facture trouvée</TableCell></TableRow>
-              ) : data.data.map(invoice => (
+              ) : paginated.map(invoice => (
                 <TableRow key={invoice.id}>
                   <TableCell className="font-medium font-mono">{invoice.invoiceNumber}</TableCell>
                   <TableCell>{invoice.partnerName || '-'}</TableCell>
@@ -141,6 +147,7 @@ export default function InvoicesList() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </CardContent>
       </Card>
 

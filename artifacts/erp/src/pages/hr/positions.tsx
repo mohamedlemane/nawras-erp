@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
@@ -17,8 +18,13 @@ import { useToast } from "@/hooks/use-toast";
 export default function PositionsList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const { data: positions, isLoading } = useListPositions();
   const { data: departments } = useListDepartments();
+  const rows = positions ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<Position | null>(null);
@@ -81,7 +87,7 @@ export default function PositionsList() {
               <TableRow><TableCell colSpan={4} className="text-center h-24">Chargement...</TableCell></TableRow>
             ) : !positions?.length ? (
               <TableRow><TableCell colSpan={4} className="text-center h-24 text-muted-foreground">Aucun poste</TableCell></TableRow>
-            ) : positions.map(pos => (
+            ) : paginated.map(pos => (
               <TableRow key={pos.id}>
                 <TableCell className="font-medium">{pos.name}</TableCell>
                 <TableCell>{getDeptName(pos.departmentId)}</TableCell>
@@ -94,6 +100,7 @@ export default function PositionsList() {
             ))}
           </TableBody>
         </Table>
+        <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </CardContent></Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,6 +23,8 @@ const emptyForm = (): CreateProductBody => ({
 export default function ProductsList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<Product | null>(null);
@@ -29,6 +32,9 @@ export default function ProductsList() {
   const [form, setForm] = useState<CreateProductBody>(emptyForm());
 
   const { data, isLoading } = useListProducts({ search: search || undefined } as any);
+  const rows = data?.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/products"] });
 
@@ -79,7 +85,7 @@ export default function ProductsList() {
         <CardHeader className="py-4">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input placeholder="Rechercher..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
           </div>
         </CardHeader>
         <CardContent>
@@ -99,7 +105,7 @@ export default function ProductsList() {
                 <TableRow><TableCell colSpan={6} className="text-center h-24">Chargement...</TableCell></TableRow>
               ) : !data?.data?.length ? (
                 <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Aucun produit trouvé</TableCell></TableRow>
-              ) : data.data.map(product => (
+              ) : paginated.map(product => (
                 <TableRow key={product.id}>
                   <TableCell className="text-muted-foreground font-mono text-xs">{product.sku || '-'}</TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
@@ -118,6 +124,7 @@ export default function ProductsList() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </CardContent>
       </Card>
 

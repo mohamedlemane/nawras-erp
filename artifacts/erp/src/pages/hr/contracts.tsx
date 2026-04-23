@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Plus } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -27,8 +28,13 @@ const statusColors: Record<string, string> = {
 export default function ContractsList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const { data, isLoading } = useListContracts();
   const { data: employeesData } = useListEmployees();
+  const rows = data?.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<CreateContractBody>({
@@ -78,7 +84,7 @@ export default function ContractsList() {
               <TableRow><TableCell colSpan={6} className="text-center h-24">Chargement...</TableCell></TableRow>
             ) : !data?.data?.length ? (
               <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Aucun contrat</TableCell></TableRow>
-            ) : data.data.map(contract => (
+            ) : paginated.map(contract => (
               <TableRow key={contract.id}>
                 <TableCell className="font-medium">{contract.employeeName}</TableCell>
                 <TableCell><span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-semibold">{contractTypeLabels[contract.contractType] || contract.contractType}</span></TableCell>
@@ -90,6 +96,7 @@ export default function ContractsList() {
             ))}
           </TableBody>
         </Table>
+        <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </CardContent></Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

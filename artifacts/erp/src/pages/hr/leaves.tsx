@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Plus, CheckCircle, XCircle, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -36,12 +37,17 @@ const emptyForm = (): CreateLeaveRequestBody => ({
 export default function LeavesList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<any | null>(null);
   const [form, setForm] = useState<CreateLeaveRequestBody>(emptyForm());
 
   const { data, isLoading } = useListLeaveRequests(status !== "all" ? { status } as any : undefined);
+  const rows = data?.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const { data: employeesData } = useListEmployees();
   const { data: leaveTypes } = useListLeaveTypes();
 
@@ -114,7 +120,7 @@ export default function LeavesList() {
 
       <Card>
         <CardHeader className="py-4">
-          <Select value={status} onValueChange={setStatus}>
+          <Select value={status} onValueChange={v => { setStatus(v); setPage(1); }}>
             <SelectTrigger className="w-[180px]"><SelectValue placeholder="Statut" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous</SelectItem>
@@ -143,7 +149,7 @@ export default function LeavesList() {
                 <TableRow><TableCell colSpan={8} className="text-center h-24">Chargement...</TableCell></TableRow>
               ) : !data?.data?.length ? (
                 <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">Aucune demande trouvée</TableCell></TableRow>
-              ) : data.data.map(leave => {
+              ) : paginated.map(leave => {
                 const badge = statusBadge(leave.status);
                 return (
                   <TableRow key={leave.id}>
@@ -186,6 +192,7 @@ export default function LeavesList() {
               })}
             </TableBody>
           </Table>
+          <TablePagination page={page} totalPages={totalPages} total={rows.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </CardContent>
       </Card>
 

@@ -134,7 +134,7 @@ export function Sidebar() {
           <img
             src="/logo.png"
             alt="CTA-ONE"
-            className="h-8 w-auto object-contain"
+            className="h-10 w-auto object-contain"
           />
           {user?.isSuperAdmin && (
             <span className="text-[10px] font-semibold text-purple-500 uppercase tracking-widest">
