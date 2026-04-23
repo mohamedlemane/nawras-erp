@@ -79,11 +79,13 @@ export default function ConsultationsStats() {
   const { data: consultationTypes = [] } = useQuery<ConfigType[]>({
     queryKey: ["project-consultation-types"],
     queryFn: () => apiFetch("/api/project-consultation-types"),
+    select: (d) => Array.isArray(d) ? d : [],
   });
 
   const { data: serviceTypes = [] } = useQuery<ConfigType[]>({
     queryKey: ["project-service-types"],
     queryFn: () => apiFetch("/api/project-service-types"),
+    select: (d) => Array.isArray(d) ? d : [],
   });
 
   // Build lookup maps (code → label) from DB data
