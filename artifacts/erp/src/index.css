@@ -86,8 +86,8 @@
   --popover-foreground: 222.2 84% 4.9%;
   --popover-border: 214.3 31.8% 91.4%;
   
-  /* Primary: CTA-ONE Orange #E8520A */
-  --primary: 19 92% 47%;
+  /* Primary: CTA-ONE Bleu Marine #1e3a8a */
+  --primary: 221 70% 38%;
   --primary-foreground: 0 0% 100%;
   
   --secondary: 210 40% 96.1%;
@@ -104,18 +104,18 @@
   
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 19 92% 47%;
+  --ring: 221 70% 38%;
   
   --sidebar: 0 0% 100%;
   --sidebar-foreground: 222.2 84% 4.9%;
   --sidebar-border: 214.3 31.8% 91.4%;
-  --sidebar-primary: 19 92% 47%;
+  --sidebar-primary: 221 70% 38%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 20 100% 97%;
-  --sidebar-accent-foreground: 19 92% 35%;
-  --sidebar-ring: 19 92% 47%;
+  --sidebar-accent: 215 70% 95%;
+  --sidebar-accent-foreground: 221 70% 28%;
+  --sidebar-ring: 221 70% 38%;
 
-  --chart-1: 19 92% 47%;
+  --chart-1: 221 70% 38%;
   --chart-2: 142.1 76.2% 36.3%;
   --chart-3: 47.9 95.8% 53.1%;
   --chart-4: 288 71.4% 58.8%;
@@ -146,7 +146,7 @@
   --popover-foreground: 210 40% 98%;
   --popover-border: 217.2 32.6% 17.5%;
   
-  --primary: 19 92% 55%;
+  --primary: 221 83% 60%;
   --primary-foreground: 0 0% 100%;
   
   --secondary: 217.2 32.6% 17.5%;
@@ -163,16 +163,16 @@
   
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
-  --ring: 212.7 26.8% 83.9%;
+  --ring: 221 83% 60%;
   
   --sidebar: 222.2 84% 4.9%;
   --sidebar-foreground: 210 40% 98%;
   --sidebar-border: 217.2 32.6% 17.5%;
-  --sidebar-primary: 19 92% 55%;
+  --sidebar-primary: 221 83% 60%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 217.2 32.6% 17.5%;
+  --sidebar-accent: 221 50% 18%;
   --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 19 92% 55%;
+  --sidebar-ring: 221 83% 60%;
 
   --chart-1: 221.2 83.2% 53.3%;
   --chart-2: 142.1 76.2% 36.3%;
