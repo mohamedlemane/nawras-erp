@@ -71,6 +71,9 @@ export default function Expenses() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterSupplier, setFilterSupplier] = useState<number | null>(null);
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
   const [showForm, setShowForm] = useState(false);
@@ -104,9 +107,20 @@ export default function Expenses() {
 
   const { formatCurrency } = useCurrency();
 
+  const supplierOptions = useMemo(
+    () => (suppliersData?.data ?? []).map(s => ({
+      value: s.id,
+      label: s.companyName ? `${s.name} — ${s.companyName}` : s.name,
+    })),
+    [suppliersData]
+  );
+
   const expenses = useMemo(() => {
     let list = data?.data ?? [];
     if (filterStatus !== "all") list = list.filter(e => e.status === filterStatus);
+    if (filterSupplier) list = list.filter(e => e.supplierId === filterSupplier);
+    if (filterDateFrom) list = list.filter(e => e.expenseDate >= filterDateFrom);
+    if (filterDateTo) list = list.filter(e => e.expenseDate <= filterDateTo);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(e =>
@@ -116,7 +130,7 @@ export default function Expenses() {
       );
     }
     return list;
-  }, [data, filterStatus, search]);
+  }, [data, filterStatus, filterSupplier, filterDateFrom, filterDateTo, search]);
 
   const totalFiltered = expenses.reduce((s, e) => s + Number(e.amount), 0);
   const { sorted: sortedExpenses, sortCol, sortDir, toggle } = useSort(expenses, "expenseDate" as any, "desc");
@@ -197,12 +211,6 @@ export default function Expenses() {
 
   const typeOptions = (typesData ?? []).filter(t => t.isActive).map(t => ({ value: t.id, label: t.name }));
 
-  const supplierOptions = (suppliersData?.data ?? []).map(s => ({
-    value: s.id,
-    label: s.companyName ? `${s.name} — ${s.companyName}` : s.name,
-    sublabel: s.phone ?? undefined,
-  }));
-
   const getSupplierDisplay = (expense: Expense) =>
     expense.supplierName
       ? expense.supplierCompany
@@ -265,13 +273,22 @@ export default function Expenses() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input className="pl-8" placeholder="Rechercher..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         </div>
-        <div className="w-56">
+        <div className="w-52">
           <ReactSelect
             unstyled classNames={rsClassNames} styles={rsPortalStyles}
             isClearable placeholder="Tous les types..."
             options={typeOptions}
             value={filterType ? typeOptions.find(o => o.value === filterType) ?? null : null}
             onChange={opt => { setFilterType(opt ? opt.value : null); setPage(1); }}
+          />
+        </div>
+        <div className="w-52">
+          <ReactSelect
+            unstyled classNames={rsClassNames} styles={rsPortalStyles}
+            isClearable placeholder="Tous les fournisseurs..."
+            options={supplierOptions}
+            value={filterSupplier ? supplierOptions.find(o => o.value === filterSupplier) ?? null : null}
+            onChange={opt => { setFilterSupplier(opt ? opt.value : null); setPage(1); }}
           />
         </div>
         <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); setPage(1); }}>
@@ -284,6 +301,37 @@ export default function Expenses() {
             {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">Du</span>
+          <Input
+            type="date"
+            className="w-36 h-9 text-sm"
+            value={filterDateFrom}
+            onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">au</span>
+          <Input
+            type="date"
+            className="w-36 h-9 text-sm"
+            value={filterDateTo}
+            onChange={e => { setFilterDateTo(e.target.value); setPage(1); }}
+          />
+        </div>
+        {(search || filterType || filterSupplier || filterDateFrom || filterDateTo || filterStatus !== "all") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => {
+              setSearch(""); setFilterType(null); setFilterSupplier(null);
+              setFilterDateFrom(""); setFilterDateTo(""); setFilterStatus("all"); setPage(1);
+            }}
+          >
+            Réinitialiser
+          </Button>
+        )}
       </div>
 
       {/* Table */}
