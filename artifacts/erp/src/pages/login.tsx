@@ -112,9 +112,9 @@ export default function Login() {
   const isCompanyLogin = !!subdomain && !!company;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-orange-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-blue-50 p-4">
       <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-border/40">
-        <CardHeader className="text-center space-y-4 pb-6 pt-8">
+        <CardHeader className="text-center space-y-3 pb-6 pt-8">
           <div className="flex justify-center">
             {isCompanyLogin && company.logo ? (
               <img src={company.logo} alt={company.name} className="h-14 w-auto object-contain" />
@@ -122,6 +122,11 @@ export default function Login() {
               <img src={`${BASE}/logo.svg`} alt="CTA-One" className="h-16 w-auto object-contain" />
             )}
           </div>
+          {!isCompanyLogin && (
+            <p className="text-sm font-medium text-primary/80 italic tracking-wide">
+              une seule plateforme pour toute votre gestion
+            </p>
+          )}
           <div>
             {isCompanyLogin && (
               <CardTitle className="text-2xl font-bold tracking-tight">

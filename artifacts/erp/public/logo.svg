@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 90" width="420" height="90">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 90" width="460" height="90">
   <ellipse cx="54" cy="44" rx="50" ry="40" fill="none" stroke="#1e3a8a" stroke-width="2.2"/>
   <text x="54" y="18" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="7.5" fill="#e07020" letter-spacing="1.2">Consulting</text>
   <text x="14" y="64" font-family="Georgia, 'Times New Roman', serif" font-size="50" font-weight="bold" font-style="italic" fill="#e07020">C</text>
   <text x="53" y="52" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="bold" fill="#1e3a8a">TA</text>
   <text x="51" y="71" font-family="Georgia, 'Times New Roman', serif" font-size="16" font-style="italic" fill="#e07020" letter-spacing="1.5">One</text>
   <line x1="118" y1="10" x2="118" y2="80" stroke="#d8d8d8" stroke-width="0.8"/>
-  <text x="130" y="34" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="#1e3a8a" letter-spacing="0.5">CTA-One</text>
-  <text x="130" y="51" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#e07020">Business and consulting firm · Africa · Middle East · Asia</text>
-  <text x="130" y="66" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#1e3a8a">Cabinet d'affaires et d'expertise · Afrique · Mauritanie</text>
+  <text x="130" y="36" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#1e3a8a" letter-spacing="0.5">CTA-One</text>
+  <text x="130" y="54" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#e07020" font-style="italic">une seule plateforme pour toute votre gestion</text>
+  <text x="130" y="70" font-family="Arial, Helvetica, sans-serif" font-size="8.5" fill="#1e3a8a" opacity="0.7">Cabinet d'affaires et d'expertise · Mauritanie</text>
 </svg>
