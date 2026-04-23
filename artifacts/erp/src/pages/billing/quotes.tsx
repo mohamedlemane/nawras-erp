@@ -21,6 +21,8 @@ import { CurrencySelect } from "@/components/CurrencySelect";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortableHeader } from "@/components/ui/sortable-header";
+import { useSort } from "@/hooks/use-sort";
 import { Plus, Search, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -52,8 +54,9 @@ export default function QuotesList() {
 
   const { data, isLoading } = useListQuotes({ search: search || undefined, status: status !== "all" ? status : undefined } as any);
   const rows = data?.data ?? [];
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { sorted, sortCol, sortDir, toggle } = useSort(rows, "issueDate" as any, "desc");
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const { data: partnersData } = useListPartners();
   const { data: productsData } = useListProducts();
 
@@ -136,12 +139,12 @@ export default function QuotesList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Numéro</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Valide jusqu'au</TableHead>
-                <TableHead className="text-right">Montant</TableHead>
-                <TableHead>Statut</TableHead>
+                <SortableHeader label="Numéro" column="quoteNumber" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Client" column="partnerName" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Date" column="issueDate" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Valide jusqu'au" column="validUntil" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Montant" column="totalAmount" sortCol={sortCol} sortDir={sortDir} onSort={toggle} className="text-right" />
+                <SortableHeader label="Statut" column="status" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

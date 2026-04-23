@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortableHeader } from "@/components/ui/sortable-header";
+import { useSort } from "@/hooks/use-sort";
 import { Plus, AlertCircle, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -78,8 +80,9 @@ export default function PaymentsList() {
 
   const { data, isLoading } = useListPayments();
   const allPayments = (data?.data as AnyPayment[]) ?? [];
-  const totalPages = Math.max(1, Math.ceil(allPayments.length / PAGE_SIZE));
-  const paginated = allPayments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { sorted, sortCol, sortDir, toggle } = useSort(allPayments, "paymentDate" as any, "desc");
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const { data: invoicesData } = useListInvoices({ limit: 200 } as any);
 
   const unpaidInvoices = invoicesData?.data?.filter((inv) => inv.amountDue > 0) || [];
@@ -233,12 +236,12 @@ export default function PaymentsList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Facture</TableHead>
-                <TableHead>Client</TableHead>
+                <SortableHeader label="Date" column="paymentDate" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Facture" column="invoiceNumber" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Client" column="partnerName" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
                 <TableHead>Méthode</TableHead>
                 <TableHead>Référence</TableHead>
-                <TableHead className="text-right">Montant</TableHead>
+                <SortableHeader label="Montant" column="amount" sortCol={sortCol} sortDir={sortDir} onSort={toggle} className="text-right" />
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

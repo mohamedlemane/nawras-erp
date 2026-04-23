@@ -13,6 +13,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortableHeader } from "@/components/ui/sortable-header";
+import { useSort } from "@/hooks/use-sort";
 import { Plus, Search, Eye, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,8 +37,9 @@ export default function PartnersList() {
 
   const { data, isLoading } = useListPartners({ search: search || undefined, type: type !== "all" ? type : undefined } as any);
   const rows = data?.data ?? [];
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { sorted, sortCol, sortDir, toggle } = useSort(rows, "name" as any);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/partners"] });
 
@@ -111,10 +114,10 @@ export default function PartnersList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nom</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Entreprise</TableHead>
-                <TableHead>Email</TableHead>
+                <SortableHeader label="Nom" column="name" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Type" column="type" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Entreprise" column="companyName" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Email" column="email" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
                 <TableHead>Téléphone</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>

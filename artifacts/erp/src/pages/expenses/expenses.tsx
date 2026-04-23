@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortableHeader } from "@/components/ui/sortable-header";
+import { useSort } from "@/hooks/use-sort";
 import { Plus, Pencil, Trash2, Search, TrendingDown, CalendarDays, Receipt, Filter, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -117,8 +119,9 @@ export default function Expenses() {
   }, [data, filterStatus, search]);
 
   const totalFiltered = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const totalPages = Math.max(1, Math.ceil(expenses.length / PAGE_SIZE));
-  const paginated = expenses.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { sorted: sortedExpenses, sortCol, sortDir, toggle } = useSort(expenses, "expenseDate" as any, "desc");
+  const totalPages = Math.max(1, Math.ceil(sortedExpenses.length / PAGE_SIZE));
+  const paginated = sortedExpenses.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const createMutation = useMutation({
     mutationFn: (body: typeof EMPTY_FORM) => fetch(`${BASE}/api/expenses`, {
@@ -289,13 +292,13 @@ export default function Expenses() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Libellé</TableHead>
-                <TableHead>Type</TableHead>
+                <SortableHeader label="Date" column="expenseDate" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Libellé" column="label" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Type" column="typeName" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
                 <TableHead>Fournisseur</TableHead>
                 <TableHead>Méthode</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Montant</TableHead>
+                <SortableHeader label="Statut" column="status" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Montant" column="amount" sortCol={sortCol} sortDir={sortDir} onSort={toggle} className="text-right" />
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>

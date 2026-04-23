@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortableHeader } from "@/components/ui/sortable-header";
+import { useSort } from "@/hooks/use-sort";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,8 +35,9 @@ export default function ProductsList() {
 
   const { data, isLoading } = useListProducts({ search: search || undefined } as any);
   const rows = data?.data ?? [];
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { sorted, sortCol, sortDir, toggle } = useSort(rows, "name" as any);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/products"] });
 
@@ -92,11 +95,11 @@ export default function ProductsList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Référence</TableHead>
-                <TableHead>Nom</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Prix Unitaire</TableHead>
-                <TableHead className="text-right">TVA (%)</TableHead>
+                <SortableHeader label="Référence" column="reference" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Nom" column="name" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Type" column="type" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Prix Unitaire" column="unitPrice" sortCol={sortCol} sortDir={sortDir} onSort={toggle} className="text-right" />
+                <SortableHeader label="TVA (%)" column="vatRate" sortCol={sortCol} sortDir={sortDir} onSort={toggle} className="text-right" />
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

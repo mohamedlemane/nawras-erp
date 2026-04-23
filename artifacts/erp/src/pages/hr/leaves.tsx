@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortableHeader } from "@/components/ui/sortable-header";
+import { useSort } from "@/hooks/use-sort";
 import { Plus, CheckCircle, XCircle, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -46,8 +48,9 @@ export default function LeavesList() {
 
   const { data, isLoading } = useListLeaveRequests(status !== "all" ? { status } as any : undefined);
   const rows = data?.data ?? [];
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { sorted, sortCol, sortDir, toggle } = useSort(rows, "startDate" as any, "desc");
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const { data: employeesData } = useListEmployees();
   const { data: leaveTypes } = useListLeaveTypes();
 
@@ -134,13 +137,13 @@ export default function LeavesList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Employé</TableHead>
+                <SortableHeader label="Employé" column="employeeName" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
                 <TableHead>Type</TableHead>
-                <TableHead>Début</TableHead>
-                <TableHead>Fin</TableHead>
-                <TableHead className="text-right">Jours</TableHead>
+                <SortableHeader label="Début" column="startDate" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Fin" column="endDate" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Jours" column="daysCount" sortCol={sortCol} sortDir={sortDir} onSort={toggle} className="text-right" />
                 <TableHead>Motif</TableHead>
-                <TableHead>Statut</TableHead>
+                <SortableHeader label="Statut" column="status" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

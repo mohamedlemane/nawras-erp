@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/collapsible";
 import { useState } from "react";
 
+const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+
 const NAV_ITEMS = [
   {
     title: "Dashboard",
@@ -132,7 +134,7 @@ export function Sidebar() {
       <div className="flex h-16 items-center px-4 border-b border-sidebar-border">
         <div className="flex flex-col gap-0.5">
           <img
-            src="/logo.png"
+            src={`${BASE}/logo.png`}
             alt="CTA-ONE"
             className="h-10 w-auto object-contain"
           />

@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortableHeader } from "@/components/ui/sortable-header";
+import { useSort } from "@/hooks/use-sort";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
@@ -21,8 +23,9 @@ export default function DepartmentsList() {
   const [page, setPage] = useState(1);
   const { data: departments, isLoading } = useListDepartments();
   const rows = departments ?? [];
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { sorted, sortCol, sortDir, toggle } = useSort(rows, "name" as any);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<Department | null>(null);
@@ -87,9 +90,9 @@ export default function DepartmentsList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nom</TableHead>
+                <SortableHeader label="Nom" column="name" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
                 <TableHead>Description</TableHead>
-                <TableHead className="text-right">Employés</TableHead>
+                <SortableHeader label="Employés" column="employeeCount" sortCol={sortCol} sortDir={sortDir} onSort={toggle} className="text-right" />
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

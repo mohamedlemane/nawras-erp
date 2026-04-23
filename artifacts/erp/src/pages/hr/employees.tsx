@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortableHeader } from "@/components/ui/sortable-header";
+import { useSort } from "@/hooks/use-sort";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -58,8 +60,9 @@ export default function EmployeesList() {
     }),
   } : rawData;
   const rows = data?.data ?? [];
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { sorted, sortCol, sortDir, toggle } = useSort(rows, "firstName" as any);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
 
@@ -146,12 +149,12 @@ export default function EmployeesList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Nom</TableHead>
-                <TableHead>Département</TableHead>
-                <TableHead>Poste</TableHead>
-                <TableHead>Date d'embauche</TableHead>
-                <TableHead>Statut</TableHead>
+                <SortableHeader label="Code" column="employeeCode" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Nom" column="firstName" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Département" column="departmentName" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Poste" column="positionName" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Date d'embauche" column="hireDate" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
+                <SortableHeader label="Statut" column="employmentStatus" sortCol={sortCol} sortDir={sortDir} onSort={toggle} />
                 <TableHead className="text-center">En congé</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
