@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 90" width="460" height="90">
-  <ellipse cx="54" cy="44" rx="50" ry="40" fill="none" stroke="#1e3a8a" stroke-width="2.2"/>
-  <text x="54" y="18" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="7.5" fill="#e07020" letter-spacing="1.2">Consulting</text>
-  <text x="14" y="64" font-family="Georgia, 'Times New Roman', serif" font-size="50" font-weight="bold" font-style="italic" fill="#e07020">C</text>
-  <text x="53" y="52" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="bold" fill="#1e3a8a">TA</text>
-  <text x="51" y="71" font-family="Georgia, 'Times New Roman', serif" font-size="16" font-style="italic" fill="#e07020" letter-spacing="1.5">One</text>
-  <line x1="118" y1="10" x2="118" y2="80" stroke="#d8d8d8" stroke-width="0.8"/>
-  <text x="130" y="36" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#1e3a8a" letter-spacing="0.5">CTA-One</text>
-  <text x="130" y="58" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#e07020" font-style="italic">une seule plateforme pour toute votre gestion</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 100" width="480" height="100">
+  <ellipse cx="58" cy="50" rx="54" ry="44" fill="none" stroke="#1e3a8a" stroke-width="2.4"/>
+  <text x="58" y="20" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="8.5" fill="#e07020" letter-spacing="1.4">Consulting</text>
+  <text x="14" y="72" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="bold" font-style="italic" fill="#e07020">C</text>
+  <text x="58" y="58" font-family="Georgia, 'Times New Roman', serif" font-size="26" font-weight="bold" fill="#1e3a8a">TA</text>
+  <text x="55" y="80" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-style="italic" fill="#e07020" letter-spacing="1.8">One</text>
+  <line x1="126" y1="10" x2="126" y2="90" stroke="#d8d8d8" stroke-width="0.8"/>
+  <text x="140" y="42" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="bold" fill="#1e3a8a" letter-spacing="0.5">CTA-One</text>
+  <text x="140" y="65" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#e07020" font-style="italic">une seule plateforme pour toute votre gestion</text>
 </svg>
