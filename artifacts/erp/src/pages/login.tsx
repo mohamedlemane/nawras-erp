@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Lock, Mail, Eye, EyeOff, Globe } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, Globe } from "lucide-react";
 import { Redirect } from "wouter";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
@@ -112,20 +112,22 @@ export default function Login() {
   const isCompanyLogin = !!subdomain && !!company;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-blue-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-orange-50 p-4">
       <Card className="w-full max-w-md shadow-xl border-0 ring-1 ring-border/40">
         <CardHeader className="text-center space-y-4 pb-6 pt-8">
-          <div className="mx-auto bg-primary/10 w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden">
+          <div className="flex justify-center">
             {isCompanyLogin && company.logo ? (
-              <img src={company.logo} alt={company.name} className="w-full h-full object-contain p-1" />
+              <img src={company.logo} alt={company.name} className="h-14 w-auto object-contain" />
             ) : (
-              <Building2 className="w-8 h-8 text-primary" />
+              <img src="/logo.png" alt="CTA-ONE" className="h-16 w-auto object-contain" />
             )}
           </div>
           <div>
-            <CardTitle className="text-3xl font-bold tracking-tight">
-              {isCompanyLogin ? company.name : "CTA-ONE"}
-            </CardTitle>
+            {isCompanyLogin && (
+              <CardTitle className="text-2xl font-bold tracking-tight">
+                {company.name}
+              </CardTitle>
+            )}
             <CardDescription className="text-base mt-1">
               {isCompanyLogin
                 ? `Connectez-vous à votre espace ${company.name}`
@@ -133,7 +135,7 @@ export default function Login() {
             </CardDescription>
             {isCompanyLogin && (
               <div className="mt-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs text-blue-700 font-medium">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 border border-orange-200 px-3 py-1 text-xs text-orange-700 font-medium">
                   <Globe className="w-3 h-3" />
                   {subdomain}.ctaone.com
                 </span>

@@ -129,13 +129,15 @@ export function Sidebar() {
 
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
-      <div className="flex h-14 items-center px-4 border-b border-sidebar-border">
-        <div className="flex flex-col">
-          <span className="text-xl font-bold text-sidebar-primary tracking-tight font-sans">
-            CTA-ONE
-          </span>
+      <div className="flex h-16 items-center px-4 border-b border-sidebar-border">
+        <div className="flex flex-col gap-0.5">
+          <img
+            src="/logo.png"
+            alt="CTA-ONE"
+            className="h-8 w-auto object-contain"
+          />
           {user?.isSuperAdmin && (
-            <span className="text-[10px] font-semibold text-purple-500 uppercase tracking-widest -mt-0.5">
+            <span className="text-[10px] font-semibold text-purple-500 uppercase tracking-widest">
               Super Admin
             </span>
           )}

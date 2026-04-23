@@ -86,9 +86,9 @@
   --popover-foreground: 222.2 84% 4.9%;
   --popover-border: 214.3 31.8% 91.4%;
   
-  /* Primary: Deep Blue (Corporate Mauritanian vibe) */
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
+  /* Primary: CTA-ONE Orange #E8520A */
+  --primary: 19 92% 47%;
+  --primary-foreground: 0 0% 100%;
   
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
@@ -104,18 +104,18 @@
   
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
+  --ring: 19 92% 47%;
   
   --sidebar: 0 0% 100%;
   --sidebar-foreground: 222.2 84% 4.9%;
   --sidebar-border: 214.3 31.8% 91.4%;
-  --sidebar-primary: 221.2 83.2% 53.3%;
+  --sidebar-primary: 19 92% 47%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 40% 96.1%;
-  --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-  --sidebar-ring: 221.2 83.2% 53.3%;
+  --sidebar-accent: 20 100% 97%;
+  --sidebar-accent-foreground: 19 92% 35%;
+  --sidebar-ring: 19 92% 47%;
 
-  --chart-1: 221.2 83.2% 53.3%;
+  --chart-1: 19 92% 47%;
   --chart-2: 142.1 76.2% 36.3%;
   --chart-3: 47.9 95.8% 53.1%;
   --chart-4: 288 71.4% 58.8%;
@@ -146,8 +146,8 @@
   --popover-foreground: 210 40% 98%;
   --popover-border: 217.2 32.6% 17.5%;
   
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
+  --primary: 19 92% 55%;
+  --primary-foreground: 0 0% 100%;
   
   --secondary: 217.2 32.6% 17.5%;
   --secondary-foreground: 210 40% 98%;
@@ -168,11 +168,11 @@
   --sidebar: 222.2 84% 4.9%;
   --sidebar-foreground: 210 40% 98%;
   --sidebar-border: 217.2 32.6% 17.5%;
-  --sidebar-primary: 217.2 91.2% 59.8%;
+  --sidebar-primary: 19 92% 55%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 217.2 32.6% 17.5%;
   --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 212.7 26.8% 83.9%;
+  --sidebar-ring: 19 92% 55%;
 
   --chart-1: 221.2 83.2% 53.3%;
   --chart-2: 142.1 76.2% 36.3%;
